@@ -23,7 +23,6 @@ import com.instrumentos.dto.InstrumentoDTO;
 import com.instrumentos.model.Instrumento;
 import com.instrumentos.service.InstrumentoService;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -35,23 +34,18 @@ public class InstrumentoController {
     @Autowired
     private InstrumentoService instrumentoService;
     
-    // GET /api/instrumentos - Obtener todos los instrumentos
+    // GET /api/instrumentos - Con paginación opcional
     @GetMapping
-    public ResponseEntity<List<InstrumentoDTO>> getAllInstrumentos(HttpServletRequest request) {
+    public ResponseEntity<List<InstrumentoDTO>> getAllInstrumentos(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
         try {
-            List<Instrumento> instrumentos = instrumentoService.findAll();
-            
-            if (instrumentos.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            String baseUrl = getBaseUrl(request);
+            List<Instrumento> instrumentos = instrumentoService.findAll(page, size);
             List<InstrumentoDTO> instrumentosDTO = instrumentos.stream()
-                    .map(instrumento -> InstrumentoDTO.fromEntity(instrumento, baseUrl))
+                    .map(InstrumentoDTO::fromEntity)
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(instrumentosDTO);
-            
         } catch (Exception e) {
             System.err.println("Error al obtener instrumentos: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -60,12 +54,11 @@ public class InstrumentoController {
     
     // GET /api/instrumentos/{id} - Obtener instrumento por ID
     @GetMapping("/{id}")
-    public ResponseEntity<InstrumentoDTO> getInstrumentoById(@PathVariable Integer id, HttpServletRequest request) {
+    public ResponseEntity<InstrumentoDTO> getInstrumentoById(@PathVariable Long id) {
         try {
             return instrumentoService.findById(id)
                     .map(instrumento -> {
-                        String baseUrl = getBaseUrl(request);
-                        InstrumentoDTO dto = InstrumentoDTO.fromEntity(instrumento, baseUrl);
+                        InstrumentoDTO dto = InstrumentoDTO.fromEntity(instrumento);
                         return ResponseEntity.ok(dto);
                     })
                     .orElse(ResponseEntity.notFound().build());
@@ -79,12 +72,10 @@ public class InstrumentoController {
     // POST /api/instrumentos - Crear nuevo instrumento
     @PostMapping
     public ResponseEntity<ApiResponse<InstrumentoDTO>> createInstrumento(
-            @Valid @RequestBody Instrumento instrumento, 
-            HttpServletRequest request) {
+            @Valid @RequestBody Instrumento instrumento) {
         try {
             Instrumento savedInstrumento = instrumentoService.save(instrumento);
-            String baseUrl = getBaseUrl(request);
-            InstrumentoDTO dto = InstrumentoDTO.fromEntity(savedInstrumento, baseUrl);
+            InstrumentoDTO dto = InstrumentoDTO.fromEntity(savedInstrumento);
             
             ApiResponse<InstrumentoDTO> response = new ApiResponse<>(
                     true, 
@@ -108,13 +99,11 @@ public class InstrumentoController {
     // PUT /api/instrumentos/{id} - Actualizar instrumento
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<InstrumentoDTO>> updateInstrumento(
-            @PathVariable Integer id, 
-            @Valid @RequestBody Instrumento instrumentoDetails,
-            HttpServletRequest request) {
+            @PathVariable Long id, 
+            @Valid @RequestBody Instrumento instrumentoDetails) {
         try {
             Instrumento updatedInstrumento = instrumentoService.update(id, instrumentoDetails);
-            String baseUrl = getBaseUrl(request);
-            InstrumentoDTO dto = InstrumentoDTO.fromEntity(updatedInstrumento, baseUrl);
+            InstrumentoDTO dto = InstrumentoDTO.fromEntity(updatedInstrumento);
             
             ApiResponse<InstrumentoDTO> response = new ApiResponse<>(
                     true, 
@@ -130,7 +119,7 @@ public class InstrumentoController {
                     e.getMessage(), 
                     null
             );
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             System.err.println("Error al actualizar instrumento: " + e.getMessage());
             ApiResponse<InstrumentoDTO> response = new ApiResponse<>(
@@ -144,7 +133,7 @@ public class InstrumentoController {
     
     // DELETE /api/instrumentos/{id} - Eliminar instrumento
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteInstrumento(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<Void>> deleteInstrumento(@PathVariable Long id) {
         try {
             instrumentoService.deleteById(id);
             ApiResponse<Void> response = new ApiResponse<>(
@@ -160,7 +149,7 @@ public class InstrumentoController {
                     e.getMessage(), 
                     null
             );
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             System.err.println("Error al eliminar instrumento: " + e.getMessage());
             ApiResponse<Void> response = new ApiResponse<>(
@@ -178,12 +167,11 @@ public class InstrumentoController {
             @RequestParam(required = false) String marca,
             @RequestParam(required = false) String instrumento,
             @RequestParam(required = false) String modelo,
-            HttpServletRequest request) {
+            @RequestParam(required = false) Long categoriaId) {
         try {
-            List<Instrumento> instrumentos = instrumentoService.findByMultipleCriteria(marca, instrumento, modelo);
-            String baseUrl = getBaseUrl(request);
+            List<Instrumento> instrumentos = instrumentoService.findByMultipleCriteriaWithCategory(marca, instrumento, modelo, categoriaId);
             List<InstrumentoDTO> instrumentosDTO = instrumentos.stream()
-                    .map(inst -> InstrumentoDTO.fromEntity(inst, baseUrl))
+                    .map(InstrumentoDTO::fromEntity)
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(instrumentosDTO);
@@ -196,12 +184,11 @@ public class InstrumentoController {
     
     // GET /api/instrumentos/free-shipping - Instrumentos con envío gratis
     @GetMapping("/free-shipping")
-    public ResponseEntity<List<InstrumentoDTO>> getInstrumentosWithFreeShipping(HttpServletRequest request) {
+    public ResponseEntity<List<InstrumentoDTO>> getInstrumentosWithFreeShipping() {
         try {
             List<Instrumento> instrumentos = instrumentoService.findWithFreeShipping();
-            String baseUrl = getBaseUrl(request);
             List<InstrumentoDTO> instrumentosDTO = instrumentos.stream()
-                    .map(inst -> InstrumentoDTO.fromEntity(inst, baseUrl))
+                    .map(InstrumentoDTO::fromEntity)
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(instrumentosDTO);
@@ -211,9 +198,21 @@ public class InstrumentoController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-    
-    // Método helper para construir URL base
-    private String getBaseUrl(HttpServletRequest request) {
-        return request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+
+    // GET /api/instrumentos/categoria/{categoriaId} - Filtrar por categoría
+    @GetMapping("/categoria/{categoriaId}")
+    public ResponseEntity<List<InstrumentoDTO>> getInstrumentosByCategoria(
+            @PathVariable Long categoriaId) {
+        try {
+            List<Instrumento> instrumentos = instrumentoService.findByCategoria(categoriaId);
+            List<InstrumentoDTO> instrumentosDTO = instrumentos.stream()
+                    .map(InstrumentoDTO::fromEntity)
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(instrumentosDTO);
+        } catch (Exception e) {
+            System.err.println("Error al obtener instrumentos por categoría: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

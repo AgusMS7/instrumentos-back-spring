@@ -1,20 +1,20 @@
 package com.instrumentos.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.math.BigDecimal;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "instrumento")
@@ -22,7 +22,7 @@ public class Instrumento {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
     
     @NotBlank(message = "El nombre del instrumento es requerido")
     @Column(nullable = false)
@@ -39,27 +39,29 @@ public class Instrumento {
     @Column(length = 255)
     private String imagen;
     
-    @NotBlank(message = "El precio es requerido")
-    @Column(nullable = false, length = 20)
-    private String precio;
+    @NotNull(message = "El precio es requerido")
+    @DecimalMin(value = "0.0", inclusive = false, message = "El precio debe ser mayor a 0")
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal precio; // Cambiar a BigDecimal para manejar DECIMAL/NUMERIC
     
     @Column(name = "costoenvio", length = 10)
     private String costoEnvio = "0";
     
-    @Column(name = "cantidadvendida", length = 10)
-    private String cantidadVendida = "0";
+    @Min(value = 0, message = "La cantidad vendida no puede ser negativa")
+    @Column(name = "cantidadvendida")
+    private Integer cantidadVendida = 0;
     
     @Column(columnDefinition = "TEXT")
     private String descripcion = "";
-    
-    @OneToMany(mappedBy = "instrumento", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference
-    private List<ProductImage> images = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "idcategoria")
+    private Categoria categoria;
     
     // Constructores
     public Instrumento() {}
     
-    public Instrumento(String instrumento, String marca, String modelo, String precio) {
+    public Instrumento(String instrumento, String marca, String modelo, BigDecimal precio) {
         this.instrumento = instrumento;
         this.marca = marca;
         this.modelo = modelo;
@@ -67,11 +69,11 @@ public class Instrumento {
     }
     
     // Getters y Setters
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
     
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
     
@@ -107,11 +109,11 @@ public class Instrumento {
         this.imagen = imagen;
     }
     
-    public String getPrecio() {
+    public BigDecimal getPrecio() {
         return precio;
     }
     
-    public void setPrecio(String precio) {
+    public void setPrecio(BigDecimal precio) {
         this.precio = precio;
     }
     
@@ -123,11 +125,11 @@ public class Instrumento {
         this.costoEnvio = costoEnvio;
     }
     
-    public String getCantidadVendida() {
+    public Integer getCantidadVendida() {
         return cantidadVendida;
     }
     
-    public void setCantidadVendida(String cantidadVendida) {
+    public void setCantidadVendida(Integer cantidadVendida) {
         this.cantidadVendida = cantidadVendida;
     }
     
@@ -138,21 +140,29 @@ public class Instrumento {
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
     }
-    
-    public List<ProductImage> getImages() {
-        return images;
+
+    public Categoria getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(Categoria categoria) {
+        this.categoria = categoria;
     }
     
-    public void setImages(List<ProductImage> images) {
-        this.images = images;
+    // Getter para idCategoria (para compatibilidad con frontend)
+    public Long getIdCategoria() {
+        return categoria != null ? categoria.getId() : null;
     }
     
-    // Método helper para obtener imagen principal
-    public ProductImage getMainImage() {
-        return images.stream()
-                .filter(img -> "main".equals(img.getImageType()))
-                .findFirst()
-                .orElse(images.isEmpty() ? null : images.get(0));
+    // Setter para idCategoria (para compatibilidad con frontend)
+    public void setIdCategoria(Long idCategoria) {
+        if (idCategoria != null) {
+            Categoria cat = new Categoria();
+            cat.setId(idCategoria);
+            this.categoria = cat;
+        } else {
+            this.categoria = null;
+        }
     }
     
     @Override
@@ -162,7 +172,7 @@ public class Instrumento {
                 ", instrumento='" + instrumento + '\'' +
                 ", marca='" + marca + '\'' +
                 ", modelo='" + modelo + '\'' +
-                ", precio='" + precio + '\'' +
+                ", precio=" + precio +
                 '}';
     }
 }

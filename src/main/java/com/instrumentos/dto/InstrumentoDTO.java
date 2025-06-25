@@ -1,63 +1,67 @@
 package com.instrumentos.dto;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 import com.instrumentos.model.Instrumento;
-import com.instrumentos.model.ProductImage;
 
 public class InstrumentoDTO {
-    private Integer id;
+    private Long id;
     private String instrumento;
     private String marca;
     private String modelo;
-    private String precio;
-    private String costoenvio;
-    private String cantidadvendida;
+    private String imagen;
+    private BigDecimal precio; // Cambiar a BigDecimal
+    private String costoEnvio;
+    private Integer cantidadVendida; // Cambiar a Integer
     private String descripcion;
-    private String imagen; // Para compatibilidad
-    private List<ProductImageDTO> images;
-    private ProductImageDTO mainImage;
+    private Long idCategoria;
+    private String nombreCategoria;
     
     // Constructores
     public InstrumentoDTO() {}
     
+    public InstrumentoDTO(Long id, String instrumento, String marca, String modelo, 
+                         String imagen, BigDecimal precio, String costoEnvio, 
+                         Integer cantidadVendida, String descripcion, Long idCategoria) {
+        this.id = id;
+        this.instrumento = instrumento;
+        this.marca = marca;
+        this.modelo = modelo;
+        this.imagen = imagen;
+        this.precio = precio;
+        this.costoEnvio = costoEnvio;
+        this.cantidadVendida = cantidadVendida;
+        this.descripcion = descripcion;
+        this.idCategoria = idCategoria;
+    }
+    
     // Método estático para convertir Entity a DTO
-    public static InstrumentoDTO fromEntity(Instrumento instrumento, String baseUrl) {
+    public static InstrumentoDTO fromEntity(Instrumento instrumento) {
         InstrumentoDTO dto = new InstrumentoDTO();
         dto.setId(instrumento.getId());
         dto.setInstrumento(instrumento.getInstrumento());
         dto.setMarca(instrumento.getMarca());
         dto.setModelo(instrumento.getModelo());
+        dto.setImagen(instrumento.getImagen());
         dto.setPrecio(instrumento.getPrecio());
-        dto.setCostoenvio(instrumento.getCostoEnvio());
-        dto.setCantidadvendida(instrumento.getCantidadVendida());
+        dto.setCostoEnvio(instrumento.getCostoEnvio());
+        dto.setCantidadVendida(instrumento.getCantidadVendida());
         dto.setDescripcion(instrumento.getDescripcion());
         
-        // Convertir imágenes
-        if (instrumento.getImages() != null && !instrumento.getImages().isEmpty()) {
-            List<ProductImageDTO> imageDTOs = instrumento.getImages().stream()
-                    .map(img -> ProductImageDTO.fromEntity(img, baseUrl))
-                    .collect(Collectors.toList());
-            dto.setImages(imageDTOs);
-            
-            // Establecer imagen principal
-            ProductImage mainImg = instrumento.getMainImage();
-            if (mainImg != null) {
-                dto.setMainImage(ProductImageDTO.fromEntity(mainImg, baseUrl));
-                dto.setImagen(mainImg.getFilename()); // Compatibilidad
-            }
+        if (instrumento.getCategoria() != null) {
+            dto.setIdCategoria(instrumento.getCategoria().getId());
+            dto.setNombreCategoria(instrumento.getCategoria().getDenominacion());
         }
         
         return dto;
     }
     
     // Getters y Setters
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
     
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
     
@@ -85,38 +89,6 @@ public class InstrumentoDTO {
         this.modelo = modelo;
     }
     
-    public String getPrecio() {
-        return precio;
-    }
-    
-    public void setPrecio(String precio) {
-        this.precio = precio;
-    }
-    
-    public String getCostoenvio() {
-        return costoenvio;
-    }
-    
-    public void setCostoenvio(String costoenvio) {
-        this.costoenvio = costoenvio;
-    }
-    
-    public String getCantidadvendida() {
-        return cantidadvendida;
-    }
-    
-    public void setCantidadvendida(String cantidadvendida) {
-        this.cantidadvendida = cantidadvendida;
-    }
-    
-    public String getDescripcion() {
-        return descripcion;
-    }
-    
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
-    
     public String getImagen() {
         return imagen;
     }
@@ -124,20 +96,52 @@ public class InstrumentoDTO {
     public void setImagen(String imagen) {
         this.imagen = imagen;
     }
-    
-    public List<ProductImageDTO> getImages() {
-        return images;
+
+    public BigDecimal getPrecio() {
+        return precio;
     }
-    
-    public void setImages(List<ProductImageDTO> images) {
-        this.images = images;
+
+    public void setPrecio(BigDecimal precio) {
+        this.precio = precio;
     }
-    
-    public ProductImageDTO getMainImage() {
-        return mainImage;
+
+    public String getCostoEnvio() {
+        return costoEnvio;
     }
-    
-    public void setMainImage(ProductImageDTO mainImage) {
-        this.mainImage = mainImage;
+
+    public void setCostoEnvio(String costoEnvio) {
+        this.costoEnvio = costoEnvio;
+    }
+
+    public Integer getCantidadVendida() {
+        return cantidadVendida;
+    }
+
+    public void setCantidadVendida(Integer cantidadVendida) {
+        this.cantidadVendida = cantidadVendida;
+    }
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
+    }
+
+    public Long getIdCategoria() {
+        return idCategoria;
+    }
+
+    public void setIdCategoria(Long idCategoria) {
+        this.idCategoria = idCategoria;
+    }
+
+    public String getNombreCategoria() {
+        return nombreCategoria;
+    }
+
+    public void setNombreCategoria(String nombreCategoria) {
+        this.nombreCategoria = nombreCategoria;
     }
 }

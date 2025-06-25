@@ -2,8 +2,6 @@ package com.instrumentos.model;
 
 import java.time.LocalDateTime;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -12,8 +10,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "product_images")
@@ -21,51 +20,43 @@ public class ProductImage {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "instrumento_id", nullable = false)
-    @JsonBackReference
+    @NotNull(message = "El instrumento es requerido")
     private Instrumento instrumento;
     
-    @Column(nullable = false)
-    private String filename;
+    @NotBlank(message = "La URL de la imagen es requerida")
+    @Column(name = "image_url", nullable = false, length = 500)
+    private String imageUrl;
     
-    @Column(name = "alt_text")
+    @Column(name = "alt_text", length = 255)
     private String altText;
     
-    @Column(name = "image_type")
-    private String imageType = "main";
-    
-    @Column(name = "display_order")
-    private Integer displayOrder = 0;
+    @Column(name = "is_primary")
+    private Boolean isPrimary = false;
     
     @Column(name = "created_at")
-    private LocalDateTime createdAt;
-    
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
     
     // Constructores
-    public ProductImage() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
+    public ProductImage() {}
     
-    public ProductImage(Instrumento instrumento, String filename, String altText, String imageType) {
-        this();
+    public ProductImage(Instrumento instrumento, String imageUrl, String altText, Boolean isPrimary) {
         this.instrumento = instrumento;
-        this.filename = filename;
+        this.imageUrl = imageUrl;
         this.altText = altText;
-        this.imageType = imageType;
+        this.isPrimary = isPrimary;
+        this.createdAt = LocalDateTime.now();
     }
     
     // Getters y Setters
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
     
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
     
@@ -77,12 +68,12 @@ public class ProductImage {
         this.instrumento = instrumento;
     }
     
-    public String getFilename() {
-        return filename;
+    public String getImageUrl() {
+        return imageUrl;
     }
     
-    public void setFilename(String filename) {
-        this.filename = filename;
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
     
     public String getAltText() {
@@ -93,20 +84,12 @@ public class ProductImage {
         this.altText = altText;
     }
     
-    public String getImageType() {
-        return imageType;
+    public Boolean getIsPrimary() {
+        return isPrimary;
     }
     
-    public void setImageType(String imageType) {
-        this.imageType = imageType;
-    }
-    
-    public Integer getDisplayOrder() {
-        return displayOrder;
-    }
-    
-    public void setDisplayOrder(Integer displayOrder) {
-        this.displayOrder = displayOrder;
+    public void setIsPrimary(Boolean isPrimary) {
+        this.isPrimary = isPrimary;
     }
     
     public LocalDateTime getCreatedAt() {
@@ -117,21 +100,13 @@ public class ProductImage {
         this.createdAt = createdAt;
     }
     
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-    
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-    
-    // Método para obtener URL completa (se construye en el DTO)
-    public String getUrl(String baseUrl) {
-        return baseUrl + "/images/" + filename;
-    }
-    
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
+    @Override
+    public String toString() {
+        return "ProductImage{" +
+                "id=" + id +
+                ", imageUrl='" + imageUrl + '\'' +
+                ", altText='" + altText + '\'' +
+                ", isPrimary=" + isPrimary +
+                '}';
     }
 }

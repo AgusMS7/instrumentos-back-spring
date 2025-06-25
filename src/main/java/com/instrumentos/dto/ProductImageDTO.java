@@ -1,45 +1,64 @@
 package com.instrumentos.dto;
 
+import java.time.LocalDateTime;
+
 import com.instrumentos.model.ProductImage;
 
 public class ProductImageDTO {
-    private Integer id;
-    private String filename;
+    private Long id;
+    private Long instrumentoId;
+    private String imageUrl;
     private String altText;
-    private String imageType;
-    private Integer displayOrder;
-    private String url;
+    private Boolean isPrimary;
+    private LocalDateTime createdAt;
     
     // Constructores
     public ProductImageDTO() {}
     
+    public ProductImageDTO(Long id, Long instrumentoId, String imageUrl, String altText, Boolean isPrimary, LocalDateTime createdAt) {
+        this.id = id;
+        this.instrumentoId = instrumentoId;
+        this.imageUrl = imageUrl;
+        this.altText = altText;
+        this.isPrimary = isPrimary;
+        this.createdAt = createdAt;
+    }
+    
     // Método estático para convertir Entity a DTO
-    public static ProductImageDTO fromEntity(ProductImage image, String baseUrl) {
+    public static ProductImageDTO fromEntity(ProductImage productImage) {
         ProductImageDTO dto = new ProductImageDTO();
-        dto.setId(image.getId());
-        dto.setFilename(image.getFilename());
-        dto.setAltText(image.getAltText());
-        dto.setImageType(image.getImageType());
-        dto.setDisplayOrder(image.getDisplayOrder());
-        dto.setUrl(baseUrl + "/images/" + image.getFilename());
+        dto.setId(productImage.getId());
+        dto.setInstrumentoId(productImage.getInstrumento().getId());
+        dto.setImageUrl(productImage.getImageUrl());
+        dto.setAltText(productImage.getAltText());
+        dto.setIsPrimary(productImage.getIsPrimary());
+        dto.setCreatedAt(productImage.getCreatedAt());
         return dto;
     }
     
     // Getters y Setters
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
     
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
     
-    public String getFilename() {
-        return filename;
+    public Long getInstrumentoId() {
+        return instrumentoId;
     }
     
-    public void setFilename(String filename) {
-        this.filename = filename;
+    public void setInstrumentoId(Long instrumentoId) {
+        this.instrumentoId = instrumentoId;
+    }
+    
+    public String getImageUrl() {
+        return imageUrl;
+    }
+    
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
     
     public String getAltText() {
@@ -50,27 +69,19 @@ public class ProductImageDTO {
         this.altText = altText;
     }
     
-    public String getImageType() {
-        return imageType;
+    public Boolean getIsPrimary() {
+        return isPrimary;
     }
     
-    public void setImageType(String imageType) {
-        this.imageType = imageType;
+    public void setIsPrimary(Boolean isPrimary) {
+        this.isPrimary = isPrimary;
     }
     
-    public Integer getDisplayOrder() {
-        return displayOrder;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
     
-    public void setDisplayOrder(Integer displayOrder) {
-        this.displayOrder = displayOrder;
-    }
-    
-    public String getUrl() {
-        return url;
-    }
-    
-    public void setUrl(String url) {
-        this.url = url;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
