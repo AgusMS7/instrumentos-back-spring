@@ -22,6 +22,9 @@ public class InstrumentoService {
     @Autowired
     private InstrumentoRepository instrumentoRepository;
 
+    @Autowired
+    private ProductImageService productImageService;
+
     // Obtener todos los instrumentos
     public List<InstrumentoDTO> findAll() {
         try {
@@ -73,6 +76,10 @@ public class InstrumentoService {
     @Transactional
     public void deleteById(Long id) {
         try {
+            // Primero eliminar las imágenes asociadas
+            productImageService.deleteImagesByInstrumento(id);
+            
+            // Luego eliminar el instrumento
             instrumentoRepository.deleteById(id);
         } catch (Exception e) {
             throw new RuntimeException("Error al eliminar instrumento: " + e.getMessage(), e);

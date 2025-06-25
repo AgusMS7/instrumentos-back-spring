@@ -21,4 +21,3 @@ public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
     // Verificar si existe una categoría con esa denominación
     boolean existsByDenominacionIgnoreCase(String denominacion);
 }
-

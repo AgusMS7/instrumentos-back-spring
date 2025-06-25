@@ -1,162 +1,237 @@
 package com.instrumentos.controller;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.UUID;
 
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.instrumentos.dto.ApiResponse;
+import com.instrumentos.dto.ProductImageDTO;
+import com.instrumentos.service.InstrumentoService;
+import com.instrumentos.service.ProductImageService;
 
 @RestController
-@RequestMapping("/images")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
+@RequestMapping("/api/images")
+@CrossOrigin(originPatterns = {"http://localhost:*", "https://localhost:*"}, allowCredentials = "true")
 public class ImageController {
     
-    @GetMapping("/{filename:.+}")
-    public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
+    private static final String UPLOAD_DIR = "public/images/";
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    private static final String[] ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"};
+    
+    @Autowired
+    private ProductImageService productImageService;
+    
+    @Autowired
+    private InstrumentoService instrumentoService;
+    
+    // Subir imagen para un instrumento
+    @PostMapping("/upload/{instrumentoId}")
+    public ResponseEntity<ApiResponse<ProductImageDTO>> uploadImage(
+            @PathVariable Long instrumentoId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "false") boolean isPrimary,
+            @RequestParam(required = false) String altText) {
+        
         try {
-            Resource resource = null;
-            
-            System.out.println("🔍 Buscando imagen: " + filename);
-            
-            // 1. Buscar en public/images del proyecto backend
-            Path publicPath = Paths.get("public", "images", filename);
-            System.out.println("📁 Buscando en: " + publicPath.toAbsolutePath());
-            if (Files.exists(publicPath) && Files.isReadable(publicPath)) {
-                resource = new FileSystemResource(publicPath.toFile());
-                System.out.println("✅ Imagen encontrada en: " + publicPath.toAbsolutePath());
+            // Validar que el instrumento existe
+            if (!instrumentoService.existsById(instrumentoId)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, "Instrumento no encontrado", null));
             }
             
-            // 2. Buscar en src/main/resources/static/images del backend
-            if (resource == null || !resource.exists()) {
-                Path resourcePath = Paths.get("src", "main", "resources", "static", "images", filename);
-                System.out.println("📁 Buscando en: " + resourcePath.toAbsolutePath());
-                if (Files.exists(resourcePath) && Files.isReadable(resourcePath)) {
-                    resource = new FileSystemResource(resourcePath.toFile());
-                    System.out.println("✅ Imagen encontrada en: " + resourcePath.toAbsolutePath());
-                }
+            // Validar archivo
+            String validationError = validateFile(file);
+            if (validationError != null) {
+                return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(false, validationError, null));
             }
             
-            // 3. Buscar en classpath (resources compilados)
-            if (resource == null || !resource.exists()) {
-                try {
-                    resource = new ClassPathResource("static/images/" + filename);
-                    if (resource.exists()) {
-                        System.out.println("✅ Imagen encontrada en classpath: static/images/" + filename);
-                    } else {
-                        System.out.println("❌ No encontrada en classpath: static/images/" + filename);
-                    }
-                } catch (Exception e) {
-                    System.out.println("❌ Error en classpath: " + e.getMessage());
-                }
+            // Crear directorio si no existe
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
             }
             
-            // 4. Buscar en target/classes/static/images (compilado)
-            if (resource == null || !resource.exists()) {
-                Path targetPath = Paths.get("target", "classes", "static", "images", filename);
-                System.out.println("📁 Buscando en: " + targetPath.toAbsolutePath());
-                if (Files.exists(targetPath) && Files.isReadable(targetPath)) {
-                    resource = new FileSystemResource(targetPath.toFile());
-                    System.out.println("✅ Imagen encontrada en: " + targetPath.toAbsolutePath());
-                }
-            }
+            // Generar nombre único para el archivo
+            String originalFilename = file.getOriginalFilename();
+            String extension = getFileExtension(originalFilename);
+            String uniqueFilename = UUID.randomUUID().toString() + extension;
             
-            if (resource != null && resource.exists()) {
-                // Determinar el tipo de contenido
-                String contentType = "image/jpeg";
-                if (filename.toLowerCase().endsWith(".png")) {
-                    contentType = "image/png";
-                } else if (filename.toLowerCase().endsWith(".gif")) {
-                    contentType = "image/gif";
-                } else if (filename.toLowerCase().endsWith(".webp")) {
-                    contentType = "image/webp";
-                }
+            // Guardar archivo
+            Path filePath = uploadPath.resolve(uniqueFilename);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            
+            // Crear registro en base de datos
+            ProductImageDTO imageDTO = productImageService.createImage(
+                instrumentoId, 
+                uniqueFilename, 
+                altText != null ? altText : originalFilename,
+                isPrimary
+            );
+            
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse<>(true, "Imagen subida exitosamente", imageDTO));
                 
-                System.out.println("✅ Sirviendo imagen: " + filename + " (" + contentType + ")");
-                
-                return ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
-                        .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
-                        .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-                        .contentType(MediaType.parseMediaType(contentType))
-                        .body(resource);
-            } else {
-                System.out.println("❌ Imagen NO encontrada: " + filename);
-                System.out.println("📍 Directorio actual: " + System.getProperty("user.dir"));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error al guardar la imagen: " + e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error interno: " + e.getMessage(), null));
+        }
+    }
+    
+    // Obtener imagen por nombre de archivo
+    @GetMapping("/{filename:.+}")
+    public ResponseEntity<Resource> getImage(@PathVariable String filename) {
+        try {
+            Path imagePath = Paths.get(UPLOAD_DIR).resolve(filename);
+            
+            if (!Files.exists(imagePath) || !Files.isReadable(imagePath)) {
                 return ResponseEntity.notFound().build();
             }
+            
+            Resource resource = new FileSystemResource(imagePath.toFile());
+            String contentType = determineContentType(filename);
+            
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(resource);
+                
         } catch (Exception e) {
-            System.err.println("❌ Error sirviendo archivo " + filename + ": " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.notFound().build();
         }
     }
     
-    // Endpoint de debug para listar imágenes disponibles
-    @GetMapping("/debug/list")
-    public ResponseEntity<String> listImages() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("🔍 Debug de imágenes - Directorio actual: ").append(System.getProperty("user.dir")).append("\n\n");
-        
-        // Verificar public/images
-        sb.append("📁 public/images/:\n");
-        Path publicDir = Paths.get("public", "images");
-        sb.append("   Ruta: ").append(publicDir.toAbsolutePath()).append("\n");
-        if (Files.exists(publicDir)) {
-            try {
-                Files.list(publicDir).forEach(path -> {
-                    sb.append("  ✅ ").append(path.getFileName()).append("\n");
-                });
-            } catch (Exception e) {
-                sb.append("  ❌ Error listando: ").append(e.getMessage()).append("\n");
+    // Obtener todas las imágenes de un instrumento
+    @GetMapping("/instrumento/{instrumentoId}")
+    public ResponseEntity<ApiResponse<List<ProductImageDTO>>> getImagesByInstrumento(@PathVariable Long instrumentoId) {
+        try {
+            List<ProductImageDTO> images = productImageService.getImagesByInstrumento(instrumentoId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Imágenes obtenidas exitosamente", images));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error al obtener imágenes: " + e.getMessage(), null));
+        }
+    }
+    
+    // Obtener imagen principal de un instrumento
+    @GetMapping("/instrumento/{instrumentoId}/primary")
+    public ResponseEntity<ApiResponse<ProductImageDTO>> getPrimaryImage(@PathVariable Long instrumentoId) {
+        try {
+            ProductImageDTO primaryImage = productImageService.getPrimaryImage(instrumentoId);
+            if (primaryImage != null) {
+                return ResponseEntity.ok(new ApiResponse<>(true, "Imagen principal encontrada", primaryImage));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, "No se encontró imagen principal", null));
             }
-        } else {
-            sb.append("  ❌ Directorio no existe\n");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error al obtener imagen principal: " + e.getMessage(), null));
+        }
+    }
+    
+    // Establecer imagen como principal
+    @PostMapping("/{imageId}/set-primary")
+    public ResponseEntity<ApiResponse<ProductImageDTO>> setPrimaryImage(@PathVariable Long imageId) {
+        try {
+            ProductImageDTO updatedImage = productImageService.setPrimaryImage(imageId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Imagen establecida como principal", updatedImage));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse<>(false, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error al establecer imagen principal: " + e.getMessage(), null));
+        }
+    }
+    
+    // Eliminar imagen
+    @DeleteMapping("/{imageId}")
+    public ResponseEntity<ApiResponse<Void>> deleteImage(@PathVariable Long imageId) {
+        try {
+            productImageService.deleteImage(imageId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Imagen eliminada exitosamente", null));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse<>(false, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error al eliminar imagen: " + e.getMessage(), null));
+        }
+    }
+    
+    // Métodos auxiliares
+    private String validateFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            return "El archivo está vacío";
         }
         
-        // Verificar src/main/resources/static/images
-        sb.append("\n📁 src/main/resources/static/images/:\n");
-        Path resourceDir = Paths.get("src", "main", "resources", "static", "images");
-        sb.append("   Ruta: ").append(resourceDir.toAbsolutePath()).append("\n");
-        if (Files.exists(resourceDir)) {
-            try {
-                Files.list(resourceDir).forEach(path -> {
-                    sb.append("  ✅ ").append(path.getFileName()).append("\n");
-                });
-            } catch (Exception e) {
-                sb.append("  ❌ Error listando: ").append(e.getMessage()).append("\n");
-            }
-        } else {
-            sb.append("  ❌ Directorio no existe\n");
+        if (file.getSize() > MAX_FILE_SIZE) {
+            return "El archivo es demasiado grande. Máximo permitido: 5MB";
         }
         
-        // Verificar target/classes/static/images
-        sb.append("\n📁 target/classes/static/images/:\n");
-        Path targetDir = Paths.get("target", "classes", "static", "images");
-        sb.append("   Ruta: ").append(targetDir.toAbsolutePath()).append("\n");
-        if (Files.exists(targetDir)) {
-            try {
-                Files.list(targetDir).forEach(path -> {
-                    sb.append("  ✅ ").append(path.getFileName()).append("\n");
-                });
-            } catch (Exception e) {
-                sb.append("  ❌ Error listando: ").append(e.getMessage()).append("\n");
-            }
-        } else {
-            sb.append("  ❌ Directorio no existe\n");
+        String filename = file.getOriginalFilename();
+        if (filename == null) {
+            return "Nombre de archivo inválido";
         }
         
-        return ResponseEntity.ok()
-                .contentType(MediaType.TEXT_PLAIN)
-                .body(sb.toString());
+        String extension = getFileExtension(filename).toLowerCase();
+        boolean validExtension = false;
+        for (String allowedExt : ALLOWED_EXTENSIONS) {
+            if (extension.equals(allowedExt)) {
+                validExtension = true;
+                break;
+            }
+        }
+        
+        if (!validExtension) {
+            return "Tipo de archivo no permitido. Permitidos: " + String.join(", ", ALLOWED_EXTENSIONS);
+        }
+        
+        return null; // Sin errores
+    }
+    
+    private String getFileExtension(String filename) {
+        if (filename == null || filename.lastIndexOf('.') == -1) {
+            return "";
+        }
+        return filename.substring(filename.lastIndexOf('.'));
+    }
+    
+    private String determineContentType(String filename) {
+        String extension = getFileExtension(filename).toLowerCase();
+        switch (extension) {
+            case ".png": return "image/png";
+            case ".gif": return "image/gif";
+            case ".webp": return "image/webp";
+            case ".jpg":
+            case ".jpeg":
+            default: return "image/jpeg";
+        }
     }
 }
