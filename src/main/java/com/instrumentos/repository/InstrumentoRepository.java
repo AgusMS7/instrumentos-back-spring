@@ -1,0 +1,50 @@
+package com.instrumentos.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import com.instrumentos.model.Instrumento;
+
+@Repository
+public interface InstrumentoRepository extends JpaRepository<Instrumento, Integer> {
+    
+    // Buscar por marca (case insensitive)
+    List<Instrumento> findByMarcaContainingIgnoreCase(String marca);
+    
+    // Buscar por nombre de instrumento (case insensitive)
+    List<Instrumento> findByInstrumentoContainingIgnoreCase(String instrumento);
+    
+    // Buscar por marca y modelo
+    List<Instrumento> findByMarcaAndModelo(String marca, String modelo);
+    
+    // Buscar instrumentos con envío gratis
+    List<Instrumento> findByCostoEnvio(String costoEnvio);
+    
+    // Query personalizada para buscar por múltiples criterios
+    @Query("SELECT i FROM Instrumento i WHERE " +
+           "(:marca IS NULL OR LOWER(i.marca) LIKE LOWER(CONCAT('%', :marca, '%'))) AND " +
+           "(:instrumento IS NULL OR LOWER(i.instrumento) LIKE LOWER(CONCAT('%', :instrumento, '%'))) AND " +
+           "(:modelo IS NULL OR LOWER(i.modelo) LIKE LOWER(CONCAT('%', :modelo, '%')))")
+    List<Instrumento> findByMultipleCriteria(
+            @Param("marca") String marca,
+            @Param("instrumento") String instrumento,
+            @Param("modelo") String modelo
+    );
+    
+    // Obtener instrumento con sus imágenes
+    @Query("SELECT i FROM Instrumento i LEFT JOIN FETCH i.images WHERE i.id = :id")
+    Optional<Instrumento> findByIdWithImages(@Param("id") Integer id);
+    
+    // Obtener todos los instrumentos con sus imágenes
+    @Query("SELECT DISTINCT i FROM Instrumento i LEFT JOIN FETCH i.images")
+    List<Instrumento> findAllWithImages();
+    
+    // Contar instrumentos por marca
+    @Query("SELECT i.marca, COUNT(i) FROM Instrumento i GROUP BY i.marca")
+    List<Object[]> countByMarca();
+}
