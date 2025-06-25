@@ -1,66 +1,47 @@
 package com.instrumentos.repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.instrumentos.model.Categoria;
 import com.instrumentos.model.Instrumento;
 
 @Repository
 public interface InstrumentoRepository extends JpaRepository<Instrumento, Long> {
     
-    // Buscar por marca (case insensitive)
-    List<Instrumento> findByMarcaContainingIgnoreCase(String marca);
+    // Buscar por categoría
+    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria WHERE i.categoria.id = :categoriaId")
+    List<Instrumento> findByCategoriaId(@Param("categoriaId") Long categoriaId);
     
-    // Buscar por nombre de instrumento (case insensitive)
-    List<Instrumento> findByInstrumentoContainingIgnoreCase(String instrumento);
+    // Buscar por nombre (contiene, ignorando mayúsculas)
+    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria WHERE LOWER(i.instrumento) LIKE LOWER(CONCAT('%', :instrumento, '%'))")
+    List<Instrumento> findByInstrumentoContainingIgnoreCase(@Param("instrumento") String instrumento);
     
-    // Buscar por marca y modelo
-    List<Instrumento> findByMarcaAndModelo(String marca, String modelo);
+    // Buscar por marca
+    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria WHERE LOWER(i.marca) LIKE LOWER(CONCAT('%', :marca, '%'))")
+    List<Instrumento> findByMarcaContainingIgnoreCase(@Param("marca") String marca);
     
-    // Buscar instrumentos con envío gratis
-    List<Instrumento> findByCostoEnvio(String costoEnvio);
-
-    // Buscar instrumentos por categoría
-    List<Instrumento> findByCategoria(Categoria categoria);
-
-    // Buscar instrumentos por ID de categoría
-    List<Instrumento> findByCategoriaId(Long categoriaId);
-
-    // Query personalizada para buscar por múltiples criterios incluyendo categoría
-    @Query("SELECT i FROM Instrumento i WHERE " +
-            "(:marca IS NULL OR LOWER(i.marca) LIKE LOWER(CONCAT('%', :marca, '%'))) AND " +
-            "(:instrumento IS NULL OR LOWER(i.instrumento) LIKE LOWER(CONCAT('%', :instrumento, '%'))) AND " +
-            "(:modelo IS NULL OR LOWER(i.modelo) LIKE LOWER(CONCAT('%', :modelo, '%'))) AND " +
-            "(:categoriaId IS NULL OR i.categoria.id = :categoriaId)")
-    List<Instrumento> findByMultipleCriteriaWithCategory(
-            @Param("marca") String marca,
-            @Param("instrumento") String instrumento,
-            @Param("modelo") String modelo,
-            @Param("categoriaId") Long categoriaId
-    );
+    // Buscar instrumentos con precio menor o igual
+    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria WHERE i.precio <= :precio")
+    List<Instrumento> findByPrecioLessThanEqual(@Param("precio") BigDecimal precio);
     
-    // Query personalizada para buscar por múltiples criterios
-    @Query("SELECT i FROM Instrumento i WHERE " +
-           "(:marca IS NULL OR LOWER(i.marca) LIKE LOWER(CONCAT('%', :marca, '%'))) AND " +
-           "(:instrumento IS NULL OR LOWER(i.instrumento) LIKE LOWER(CONCAT('%', :instrumento, '%'))) AND " +
-           "(:modelo IS NULL OR LOWER(i.modelo) LIKE LOWER(CONCAT('%', :modelo, '%')))")
-    List<Instrumento> findByMultipleCriteria(
-            @Param("marca") String marca,
-            @Param("instrumento") String instrumento,
-            @Param("modelo") String modelo
-    );
+    // Query personalizada para buscar por múltiples campos
+    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria WHERE " +
+           "LOWER(i.instrumento) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+           "LOWER(i.marca) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+           "LOWER(i.modelo) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
+    List<Instrumento> findByMultipleFields(@Param("searchTerm") String searchTerm);
     
-    // Paginación
-    Page<Instrumento> findAll(Pageable pageable);
+    // Obtener instrumentos más vendidos
+    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria ORDER BY i.cantidadVendida DESC")
+    List<Instrumento> findTopSellingInstruments();
     
-    // Contar instrumentos por marca
-    @Query("SELECT i.marca, COUNT(i) FROM Instrumento i GROUP BY i.marca")
-    List<Object[]> countByMarca();
+    // Override del findAll para incluir categoría
+    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria")
+    @Override
+    List<Instrumento> findAll();
 }

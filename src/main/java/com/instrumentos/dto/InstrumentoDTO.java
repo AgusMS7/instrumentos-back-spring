@@ -2,6 +2,7 @@ package com.instrumentos.dto;
 
 import java.math.BigDecimal;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.instrumentos.model.Instrumento;
 
 public class InstrumentoDTO {
@@ -14,15 +15,20 @@ public class InstrumentoDTO {
     private String costoEnvio;
     private Integer cantidadVendida; // Cambiar a Integer
     private String descripcion;
-    private Long idCategoria;
-    private String nombreCategoria;
     
+    @JsonProperty("idCategoria")
+    private Long idCategoria;
+    
+    @JsonProperty("categoriaDenominacion")
+    private String categoriaDenominacion;
+
     // Constructores
     public InstrumentoDTO() {}
     
     public InstrumentoDTO(Long id, String instrumento, String marca, String modelo, 
                          String imagen, BigDecimal precio, String costoEnvio, 
-                         Integer cantidadVendida, String descripcion, Long idCategoria) {
+                         Integer cantidadVendida, String descripcion, 
+                         Long idCategoria, String categoriaDenominacion) {
         this.id = id;
         this.instrumento = instrumento;
         this.marca = marca;
@@ -33,6 +39,7 @@ public class InstrumentoDTO {
         this.cantidadVendida = cantidadVendida;
         this.descripcion = descripcion;
         this.idCategoria = idCategoria;
+        this.categoriaDenominacion = categoriaDenominacion;
     }
     
     // Método estático para convertir Entity a DTO
@@ -50,7 +57,7 @@ public class InstrumentoDTO {
         
         if (instrumento.getCategoria() != null) {
             dto.setIdCategoria(instrumento.getCategoria().getId());
-            dto.setNombreCategoria(instrumento.getCategoria().getDenominacion());
+            dto.setCategoriaDenominacion(instrumento.getCategoria().getDenominacion());
         }
         
         return dto;
@@ -137,11 +144,23 @@ public class InstrumentoDTO {
         this.idCategoria = idCategoria;
     }
 
-    public String getNombreCategoria() {
-        return nombreCategoria;
+    public String getCategoriaDenominacion() {
+        return categoriaDenominacion;
     }
 
-    public void setNombreCategoria(String nombreCategoria) {
-        this.nombreCategoria = nombreCategoria;
+    public void setCategoriaDenominacion(String categoriaDenominacion) {
+        this.categoriaDenominacion = categoriaDenominacion;
+    }
+
+    @Override
+    public String toString() {
+        return "InstrumentoDTO{" +
+                "id=" + id +
+                ", instrumento='" + instrumento + '\'' +
+                ", marca='" + marca + '\'' +
+                ", modelo='" + modelo + '\'' +
+                ", precio=" + precio +
+                ", categoriaDenominacion='" + categoriaDenominacion + '\'' +
+                '}';
     }
 }

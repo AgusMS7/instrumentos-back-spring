@@ -316,6 +316,19 @@ src/
 ```
 
 ---
+## 🧪 TESTING AUTOMATIZADO
+
+**Script de testing incluido:**
+```bash
+# Ejecutar todos los tests
+bash test-api.sh
+
+# Tests incluidos:
+- ✅ CRUD de categorías
+- ✅ CRUD de instrumentos  
+- ✅ Filtrado y búsqueda
+- ✅ Validación de errores
+- ✅ Paginación
 
 ## ✅ FUNCIONALIDADES IMPLEMENTADAS
 
@@ -372,4 +385,4 @@ Ante errores o dudas:
 Laboratorio de Computación 4 – UTN FRM TUP  
 **Estudiante:**
 Agustín Sandoval
- 
+

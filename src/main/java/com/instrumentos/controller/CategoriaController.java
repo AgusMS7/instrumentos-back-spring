@@ -25,13 +25,13 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/categorias")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
+@CrossOrigin(originPatterns = {"http://localhost:*", "https://localhost:*"}, allowCredentials = "true")
 @Validated
 public class CategoriaController {
-    
+
     @Autowired
     private CategoriaService categoriaService;
-    
+
     // GET /api/categorias - Obtener todas las categorías
     @GetMapping
     public ResponseEntity<List<Categoria>> getAllCategorias() {
@@ -43,7 +43,7 @@ public class CategoriaController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-    
+
     // GET /api/categorias/{id} - Obtener categoría por ID
     @GetMapping("/{id}")
     public ResponseEntity<Categoria> getCategoriaById(@PathVariable Long id) {
@@ -56,96 +56,96 @@ public class CategoriaController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-    
+
     // POST /api/categorias - Crear nueva categoría
     @PostMapping
     public ResponseEntity<ApiResponse<Categoria>> createCategoria(@Valid @RequestBody Categoria categoria) {
         try {
             Categoria savedCategoria = categoriaService.save(categoria);
             ApiResponse<Categoria> response = new ApiResponse<>(
-                    true, 
-                    "Categoría creada exitosamente", 
+                    true,
+                    "Categoría creada exitosamente",
                     savedCategoria
             );
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (RuntimeException e) {
             ApiResponse<Categoria> response = new ApiResponse<>(
-                    false, 
-                    e.getMessage(), 
+                    false,
+                    e.getMessage(),
                     null
             );
             return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             System.err.println("Error al crear categoría: " + e.getMessage());
             ApiResponse<Categoria> response = new ApiResponse<>(
-                    false, 
-                    "Error interno del servidor", 
+                    false,
+                    "Error interno del servidor",
                     null
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-    
+
     // PUT /api/categorias/{id} - Actualizar categoría
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Categoria>> updateCategoria(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @Valid @RequestBody Categoria categoriaDetails) {
         try {
             Categoria updatedCategoria = categoriaService.update(id, categoriaDetails);
             ApiResponse<Categoria> response = new ApiResponse<>(
-                    true, 
-                    "Categoría actualizada exitosamente", 
+                    true,
+                    "Categoría actualizada exitosamente",
                     updatedCategoria
             );
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             ApiResponse<Categoria> response = new ApiResponse<>(
-                    false, 
-                    e.getMessage(), 
+                    false,
+                    e.getMessage(),
                     null
             );
             return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             System.err.println("Error al actualizar categoría: " + e.getMessage());
             ApiResponse<Categoria> response = new ApiResponse<>(
-                    false, 
-                    "Error interno del servidor", 
+                    false,
+                    "Error interno del servidor",
                     null
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-    
+
     // DELETE /api/categorias/{id} - Eliminar categoría
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteCategoria(@PathVariable Long id) {
         try {
             categoriaService.deleteById(id);
             ApiResponse<Void> response = new ApiResponse<>(
-                    true, 
-                    "Categoría eliminada exitosamente", 
+                    true,
+                    "Categoría eliminada exitosamente",
                     null
             );
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             ApiResponse<Void> response = new ApiResponse<>(
-                    false, 
-                    e.getMessage(), 
+                    false,
+                    e.getMessage(),
                     null
             );
             return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             System.err.println("Error al eliminar categoría: " + e.getMessage());
             ApiResponse<Void> response = new ApiResponse<>(
-                    false, 
-                    "Error interno del servidor", 
+                    false,
+                    "Error interno del servidor",
                     null
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-    
+
     // GET /api/categorias/search - Buscar categorías
     @GetMapping("/search")
     public ResponseEntity<List<Categoria>> searchCategorias(@RequestParam String denominacion) {

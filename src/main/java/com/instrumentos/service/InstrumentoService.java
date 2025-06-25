@@ -2,131 +2,139 @@ package com.instrumentos.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.instrumentos.model.Categoria;
+import com.instrumentos.dto.InstrumentoDTO;
 import com.instrumentos.model.Instrumento;
 import com.instrumentos.repository.InstrumentoRepository;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 public class InstrumentoService {
-    
+
     @Autowired
     private InstrumentoRepository instrumentoRepository;
 
-    @Autowired
-    private CategoriaService categoriaService;
-    
     // Obtener todos los instrumentos
-    public List<Instrumento> findAll() {
-        return instrumentoRepository.findAll();
-    }
-    
-    // Obtener todos los instrumentos con paginación
-    public List<Instrumento> findAll(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Instrumento> pageResult = instrumentoRepository.findAll(pageable);
-        return pageResult.getContent();
-    }
-    
-    // Obtener instrumento por ID
-    public Optional<Instrumento> findById(Long id) {
-        return instrumentoRepository.findById(id);
-    }
-    
-    // Crear nuevo instrumento
-    public Instrumento save(Instrumento instrumento) {
-        // Validar y asignar categoría si se proporciona
-        if (instrumento.getCategoria() != null && instrumento.getCategoria().getId() != null) {
-            Categoria categoria = categoriaService.findById(instrumento.getCategoria().getId())
-                    .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
-            instrumento.setCategoria(categoria);
+    public List<InstrumentoDTO> findAll() {
+        try {
+            List<Instrumento> instrumentos = instrumentoRepository.findAll();
+            return instrumentos.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Error al obtener instrumentos: " + e.getMessage(), e);
         }
-        return instrumentoRepository.save(instrumento);
     }
-    
-    // Actualizar instrumento
-    public Instrumento update(Long id, Instrumento instrumentoDetails) {
-        return instrumentoRepository.findById(id)
-                .map(instrumento -> {
-                    instrumento.setInstrumento(instrumentoDetails.getInstrumento());
-                    instrumento.setMarca(instrumentoDetails.getMarca());
-                    instrumento.setModelo(instrumentoDetails.getModelo());
-                    instrumento.setPrecio(instrumentoDetails.getPrecio());
-                    instrumento.setCostoEnvio(instrumentoDetails.getCostoEnvio());
-                    instrumento.setCantidadVendida(instrumentoDetails.getCantidadVendida());
-                    instrumento.setDescripcion(instrumentoDetails.getDescripcion());
-                    instrumento.setImagen(instrumentoDetails.getImagen());
-                    
-                    // Validar y asignar categoría
-                    if (instrumentoDetails.getCategoria() != null && instrumentoDetails.getCategoria().getId() != null) {
-                        Categoria categoria = categoriaService.findById(instrumentoDetails.getCategoria().getId())
-                                .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
-                        instrumento.setCategoria(categoria);
-                    }
-                    
-                    return instrumentoRepository.save(instrumento);
-                })
-                .orElseThrow(() -> new RuntimeException("Instrumento no encontrado con ID: " + id));
+
+    // Obtener todos con paginación
+    public Page<InstrumentoDTO> findAllPaginated(Pageable pageable) {
+        try {
+            Page<Instrumento> instrumentosPage = instrumentoRepository.findAll(pageable);
+            List<InstrumentoDTO> instrumentosDTO = instrumentosPage.getContent().stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            
+            return new PageImpl<>(instrumentosDTO, pageable, instrumentosPage.getTotalElements());
+        } catch (Exception e) {
+            throw new RuntimeException("Error al obtener instrumentos paginados: " + e.getMessage(), e);
+        }
     }
-    
-    // Eliminar instrumento
+
+    // Obtener por ID
+    public Optional<InstrumentoDTO> findById(Long id) {
+        try {
+            return instrumentoRepository.findById(id)
+                    .map(this::convertToDTO);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al obtener instrumento por ID: " + e.getMessage(), e);
+        }
+    }
+
+    // Guardar instrumento
+    @Transactional
+    public InstrumentoDTO save(Instrumento instrumento) {
+        try {
+            Instrumento savedInstrumento = instrumentoRepository.save(instrumento);
+            return convertToDTO(savedInstrumento);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al guardar instrumento: " + e.getMessage(), e);
+        }
+    }
+
+    // Eliminar por ID
+    @Transactional
     public void deleteById(Long id) {
-        if (!instrumentoRepository.existsById(id)) {
-            throw new RuntimeException("Instrumento no encontrado con ID: " + id);
+        try {
+            instrumentoRepository.deleteById(id);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al eliminar instrumento: " + e.getMessage(), e);
         }
-        instrumentoRepository.deleteById(id);
     }
-    
-    // Buscar por marca
-    public List<Instrumento> findByMarca(String marca) {
-        return instrumentoRepository.findByMarcaContainingIgnoreCase(marca);
-    }
-    
-    // Buscar por nombre de instrumento
-    public List<Instrumento> findByInstrumento(String instrumento) {
-        return instrumentoRepository.findByInstrumentoContainingIgnoreCase(instrumento);
-    }
-    
-    // Buscar por múltiples criterios
-    public List<Instrumento> findByMultipleCriteria(String marca, String instrumento, String modelo) {
-        return instrumentoRepository.findByMultipleCriteria(marca, instrumento, modelo);
-    }
-    
-    // Obtener instrumentos con envío gratis
-    public List<Instrumento> findWithFreeShipping() {
-        return instrumentoRepository.findByCostoEnvio("G");
-    }
-    
-    // Verificar si existe un instrumento
+
+    // Verificar si existe
     public boolean existsById(Long id) {
-        return instrumentoRepository.existsById(id);
-    }
-    
-    // Contar total de instrumentos
-    public long count() {
-        return instrumentoRepository.count();
-    }
-
-    // Buscar instrumentos por categoría
-    public List<Instrumento> findByCategoria(Long categoriaId) {
-        return instrumentoRepository.findByCategoriaId(categoriaId);
+        try {
+            return instrumentoRepository.existsById(id);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al verificar existencia del instrumento: " + e.getMessage(), e);
+        }
     }
 
-    // Buscar por múltiples criterios incluyendo categoría
-    public List<Instrumento> findByMultipleCriteriaWithCategory(String marca, String instrumento, String modelo, Long categoriaId) {
-        return instrumentoRepository.findByMultipleCriteriaWithCategory(marca, instrumento, modelo, categoriaId);
+    // Buscar por categoría
+    public List<InstrumentoDTO> findByCategoriaId(Long categoriaId) {
+        try {
+            List<Instrumento> instrumentos = instrumentoRepository.findByCategoriaId(categoriaId);
+            return instrumentos.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Error al filtrar instrumentos por categoría: " + e.getMessage(), e);
+        }
     }
-    
-    // Obtener estadísticas por marca
-    public List<Object[]> getStatsByMarca() {
-        return instrumentoRepository.countByMarca();
+
+    // Buscar por nombre (contiene)
+    public List<InstrumentoDTO> findByInstrumentoContainingIgnoreCase(String nombre) {
+        try {
+            List<Instrumento> instrumentos = instrumentoRepository.findByInstrumentoContainingIgnoreCase(nombre);
+            return instrumentos.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Error al buscar instrumentos por nombre: " + e.getMessage(), e);
+        }
+    }
+
+    // Convertir Entity a DTO
+    private InstrumentoDTO convertToDTO(Instrumento instrumento) {
+        if (instrumento == null) {
+            return null;
+        }
+        
+        InstrumentoDTO dto = new InstrumentoDTO();
+        dto.setId(instrumento.getId());
+        dto.setInstrumento(instrumento.getInstrumento());
+        dto.setMarca(instrumento.getMarca());
+        dto.setModelo(instrumento.getModelo());
+        dto.setImagen(instrumento.getImagen());
+        dto.setPrecio(instrumento.getPrecio());
+        dto.setCostoEnvio(instrumento.getCostoEnvio());
+        dto.setCantidadVendida(instrumento.getCantidadVendida());
+        dto.setDescripcion(instrumento.getDescripcion());
+        
+        // Información de categoría
+        if (instrumento.getCategoria() != null) {
+            dto.setIdCategoria(instrumento.getCategoria().getId());
+            dto.setCategoriaDenominacion(instrumento.getCategoria().getDenominacion());
+        }
+        
+        return dto;
     }
 }

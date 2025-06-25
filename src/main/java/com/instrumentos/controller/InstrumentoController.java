@@ -1,9 +1,13 @@
 package com.instrumentos.controller;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -27,192 +31,131 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/instrumentos")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
+@CrossOrigin(originPatterns = {"http://localhost:*", "https://localhost:*"}, allowCredentials = "true")
 @Validated
 public class InstrumentoController {
-    
+
     @Autowired
     private InstrumentoService instrumentoService;
-    
-    // GET /api/instrumentos - Con paginación opcional
+
+    // Obtener todos los instrumentos con paginación
     @GetMapping
-    public ResponseEntity<List<InstrumentoDTO>> getAllInstrumentos(
+    public ResponseEntity<?> getAllInstrumentos(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir,
+            @RequestParam(defaultValue = "false") boolean paginated) {
+        
         try {
-            List<Instrumento> instrumentos = instrumentoService.findAll(page, size);
-            List<InstrumentoDTO> instrumentosDTO = instrumentos.stream()
-                    .map(InstrumentoDTO::fromEntity)
-                    .collect(Collectors.toList());
-            
-            return ResponseEntity.ok(instrumentosDTO);
+            if (paginated) {
+                Sort sort = sortDir.equalsIgnoreCase("desc") ? 
+                    Sort.by(sortBy).descending() : 
+                    Sort.by(sortBy).ascending();
+                
+                Pageable pageable = PageRequest.of(page, size, sort);
+                Page<InstrumentoDTO> instrumentos = instrumentoService.findAllPaginated(pageable);
+                
+                return ResponseEntity.ok(instrumentos);
+            } else {
+                List<InstrumentoDTO> instrumentos = instrumentoService.findAll();
+                return ResponseEntity.ok(instrumentos);
+            }
         } catch (Exception e) {
-            System.err.println("Error al obtener instrumentos: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    // GET /api/instrumentos/{id} - Obtener instrumento por ID
-    @GetMapping("/{id}")
-    public ResponseEntity<InstrumentoDTO> getInstrumentoById(@PathVariable Long id) {
-        try {
-            return instrumentoService.findById(id)
-                    .map(instrumento -> {
-                        InstrumentoDTO dto = InstrumentoDTO.fromEntity(instrumento);
-                        return ResponseEntity.ok(dto);
-                    })
-                    .orElse(ResponseEntity.notFound().build());
-                    
-        } catch (Exception e) {
-            System.err.println("Error al obtener instrumento por ID: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    // POST /api/instrumentos - Crear nuevo instrumento
-    @PostMapping
-    public ResponseEntity<ApiResponse<InstrumentoDTO>> createInstrumento(
-            @Valid @RequestBody Instrumento instrumento) {
-        try {
-            Instrumento savedInstrumento = instrumentoService.save(instrumento);
-            InstrumentoDTO dto = InstrumentoDTO.fromEntity(savedInstrumento);
-            
-            ApiResponse<InstrumentoDTO> response = new ApiResponse<>(
-                    true, 
-                    "Instrumento creado exitosamente", 
-                    dto
-            );
-            
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-            
-        } catch (Exception e) {
-            System.err.println("Error al crear instrumento: " + e.getMessage());
-            ApiResponse<InstrumentoDTO> response = new ApiResponse<>(
-                    false, 
-                    "Error interno del servidor: " + e.getMessage(), 
-                    null
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
-    
-    // PUT /api/instrumentos/{id} - Actualizar instrumento
-    @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<InstrumentoDTO>> updateInstrumento(
-            @PathVariable Long id, 
-            @Valid @RequestBody Instrumento instrumentoDetails) {
-        try {
-            Instrumento updatedInstrumento = instrumentoService.update(id, instrumentoDetails);
-            InstrumentoDTO dto = InstrumentoDTO.fromEntity(updatedInstrumento);
-            
-            ApiResponse<InstrumentoDTO> response = new ApiResponse<>(
-                    true, 
-                    "Instrumento actualizado exitosamente", 
-                    dto
-            );
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (RuntimeException e) {
-            ApiResponse<InstrumentoDTO> response = new ApiResponse<>(
-                    false, 
-                    e.getMessage(), 
-                    null
-            );
-            return ResponseEntity.badRequest().body(response);
-        } catch (Exception e) {
-            System.err.println("Error al actualizar instrumento: " + e.getMessage());
-            ApiResponse<InstrumentoDTO> response = new ApiResponse<>(
-                    false, 
-                    "Error interno del servidor", 
-                    null
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
-    
-    // DELETE /api/instrumentos/{id} - Eliminar instrumento
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteInstrumento(@PathVariable Long id) {
-        try {
-            instrumentoService.deleteById(id);
-            ApiResponse<Void> response = new ApiResponse<>(
-                    true, 
-                    "Instrumento eliminado exitosamente", 
-                    null
-            );
-            return ResponseEntity.ok(response);
-            
-        } catch (RuntimeException e) {
-            ApiResponse<Void> response = new ApiResponse<>(
-                    false, 
-                    e.getMessage(), 
-                    null
-            );
-            return ResponseEntity.badRequest().body(response);
-        } catch (Exception e) {
-            System.err.println("Error al eliminar instrumento: " + e.getMessage());
-            ApiResponse<Void> response = new ApiResponse<>(
-                    false, 
-                    "Error interno del servidor", 
-                    null
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
-    
-    // GET /api/instrumentos/search - Buscar instrumentos
-    @GetMapping("/search")
-    public ResponseEntity<List<InstrumentoDTO>> searchInstrumentos(
-            @RequestParam(required = false) String marca,
-            @RequestParam(required = false) String instrumento,
-            @RequestParam(required = false) String modelo,
-            @RequestParam(required = false) Long categoriaId) {
-        try {
-            List<Instrumento> instrumentos = instrumentoService.findByMultipleCriteriaWithCategory(marca, instrumento, modelo, categoriaId);
-            List<InstrumentoDTO> instrumentosDTO = instrumentos.stream()
-                    .map(InstrumentoDTO::fromEntity)
-                    .collect(Collectors.toList());
-            
-            return ResponseEntity.ok(instrumentosDTO);
-            
-        } catch (Exception e) {
-            System.err.println("Error en búsqueda: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    // GET /api/instrumentos/free-shipping - Instrumentos con envío gratis
-    @GetMapping("/free-shipping")
-    public ResponseEntity<List<InstrumentoDTO>> getInstrumentosWithFreeShipping() {
-        try {
-            List<Instrumento> instrumentos = instrumentoService.findWithFreeShipping();
-            List<InstrumentoDTO> instrumentosDTO = instrumentos.stream()
-                    .map(InstrumentoDTO::fromEntity)
-                    .collect(Collectors.toList());
-            
-            return ResponseEntity.ok(instrumentosDTO);
-            
-        } catch (Exception e) {
-            System.err.println("Error al obtener instrumentos con envío gratis: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error al obtener instrumentos: " + e.getMessage(), null));
         }
     }
 
-    // GET /api/instrumentos/categoria/{categoriaId} - Filtrar por categoría
-    @GetMapping("/categoria/{categoriaId}")
-    public ResponseEntity<List<InstrumentoDTO>> getInstrumentosByCategoria(
-            @PathVariable Long categoriaId) {
+    // Obtener instrumento por ID
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<InstrumentoDTO>> getInstrumentoById(@PathVariable Long id) {
         try {
-            List<Instrumento> instrumentos = instrumentoService.findByCategoria(categoriaId);
-            List<InstrumentoDTO> instrumentosDTO = instrumentos.stream()
-                    .map(InstrumentoDTO::fromEntity)
-                    .collect(Collectors.toList());
+            Optional<InstrumentoDTO> instrumento = instrumentoService.findById(id);
             
-            return ResponseEntity.ok(instrumentosDTO);
+            if (instrumento.isPresent()) {
+                return ResponseEntity.ok(new ApiResponse<>(true, "Instrumento encontrado", instrumento.get()));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, "Instrumento no encontrado", null));
+            }
         } catch (Exception e) {
-            System.err.println("Error al obtener instrumentos por categoría: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error al obtener instrumento: " + e.getMessage(), null));
+        }
+    }
+
+    // Crear nuevo instrumento
+    @PostMapping
+    public ResponseEntity<ApiResponse<InstrumentoDTO>> createInstrumento(@Valid @RequestBody Instrumento instrumento) {
+        try {
+            InstrumentoDTO nuevoInstrumento = instrumentoService.save(instrumento);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse<>(true, "Instrumento creado exitosamente", nuevoInstrumento));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, "Error al crear instrumento: " + e.getMessage(), null));
+        }
+    }
+
+    // Actualizar instrumento
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<InstrumentoDTO>> updateInstrumento(
+            @PathVariable Long id, 
+            @Valid @RequestBody Instrumento instrumento) {
+        try {
+            if (!instrumentoService.existsById(id)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, "Instrumento no encontrado", null));
+            }
+            
+            instrumento.setId(id);
+            InstrumentoDTO instrumentoActualizado = instrumentoService.save(instrumento);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Instrumento actualizado exitosamente", instrumentoActualizado));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, "Error al actualizar instrumento: " + e.getMessage(), null));
+        }
+    }
+
+    // Eliminar instrumento
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteInstrumento(@PathVariable Long id) {
+        try {
+            if (instrumentoService.existsById(id)) {
+                instrumentoService.deleteById(id);
+                return ResponseEntity.ok(new ApiResponse<>(true, "Instrumento eliminado exitosamente", null));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, "Instrumento no encontrado", null));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error al eliminar instrumento: " + e.getMessage(), null));
+        }
+    }
+
+    // Obtener instrumentos por categoría
+    @GetMapping("/categoria/{categoriaId}")
+    public ResponseEntity<?> getInstrumentosByCategoria(@PathVariable Long categoriaId) {
+        try {
+            List<InstrumentoDTO> instrumentos = instrumentoService.findByCategoriaId(categoriaId);
+            return ResponseEntity.ok(instrumentos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error al filtrar instrumentos: " + e.getMessage(), null));
+        }
+    }
+
+    // Buscar instrumentos por nombre
+    @GetMapping("/buscar")
+    public ResponseEntity<?> buscarInstrumentos(@RequestParam String nombre) {
+        try {
+            List<InstrumentoDTO> instrumentos = instrumentoService.findByInstrumentoContainingIgnoreCase(nombre);
+            return ResponseEntity.ok(instrumentos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error al buscar instrumentos: " + e.getMessage(), null));
         }
     }
 }
