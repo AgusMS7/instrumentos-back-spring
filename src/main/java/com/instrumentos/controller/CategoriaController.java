@@ -2,6 +2,8 @@ package com.instrumentos.controller;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,132 +31,97 @@ import jakarta.validation.Valid;
 @Validated
 public class CategoriaController {
 
+    private static final Logger logger = LoggerFactory.getLogger(CategoriaController.class);
+
     @Autowired
     private CategoriaService categoriaService;
 
-    // GET /api/categorias - Obtener todas las categorías
     @GetMapping
-    public ResponseEntity<List<Categoria>> getAllCategorias() {
+    public ResponseEntity<ApiResponse<List<Categoria>>> getAllCategorias() {
         try {
             List<Categoria> categorias = categoriaService.findAll();
-            return ResponseEntity.ok(categorias);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Categorías obtenidas exitosamente", categorias));
         } catch (Exception e) {
-            System.err.println("Error al obtener categorías: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            logger.error("Error al obtener categorías: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error interno del servidor", null));
         }
     }
 
-    // GET /api/categorias/{id} - Obtener categoría por ID
     @GetMapping("/{id}")
-    public ResponseEntity<Categoria> getCategoriaById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Categoria>> getCategoriaById(@PathVariable Long id) {
         try {
             return categoriaService.findById(id)
-                    .map(categoria -> ResponseEntity.ok(categoria))
-                    .orElse(ResponseEntity.notFound().build());
+                    .map(categoria -> ResponseEntity.ok(new ApiResponse<>(true, "Categoría obtenida exitosamente", categoria)))
+                    .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ApiResponse<>(false, "Categoría no encontrada", null)));
         } catch (Exception e) {
-            System.err.println("Error al obtener categoría por ID: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            logger.error("Error al obtener categoría por ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error interno del servidor", null));
         }
     }
 
-    // POST /api/categorias - Crear nueva categoría
     @PostMapping
     public ResponseEntity<ApiResponse<Categoria>> createCategoria(@Valid @RequestBody Categoria categoria) {
         try {
             Categoria savedCategoria = categoriaService.save(categoria);
-            ApiResponse<Categoria> response = new ApiResponse<>(
-                    true,
-                    "Categoría creada exitosamente",
-                    savedCategoria
-            );
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse<>(true, "Categoría creada exitosamente", savedCategoria));
         } catch (RuntimeException e) {
-            ApiResponse<Categoria> response = new ApiResponse<>(
-                    false,
-                    e.getMessage(),
-                    null
-            );
-            return ResponseEntity.badRequest().body(response);
+            logger.warn("Error de validación al crear categoría: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(false, e.getMessage(), null));
         } catch (Exception e) {
-            System.err.println("Error al crear categoría: " + e.getMessage());
-            ApiResponse<Categoria> response = new ApiResponse<>(
-                    false,
-                    "Error interno del servidor",
-                    null
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            logger.error("Error al crear categoría: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error interno del servidor", null));
         }
     }
 
-    // PUT /api/categorias/{id} - Actualizar categoría
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Categoria>> updateCategoria(
             @PathVariable Long id,
             @Valid @RequestBody Categoria categoriaDetails) {
         try {
             Categoria updatedCategoria = categoriaService.update(id, categoriaDetails);
-            ApiResponse<Categoria> response = new ApiResponse<>(
-                    true,
-                    "Categoría actualizada exitosamente",
-                    updatedCategoria
-            );
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Categoría actualizada exitosamente", updatedCategoria));
         } catch (RuntimeException e) {
-            ApiResponse<Categoria> response = new ApiResponse<>(
-                    false,
-                    e.getMessage(),
-                    null
-            );
-            return ResponseEntity.badRequest().body(response);
+            logger.warn("Error de validación al actualizar categoría {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(false, e.getMessage(), null));
         } catch (Exception e) {
-            System.err.println("Error al actualizar categoría: " + e.getMessage());
-            ApiResponse<Categoria> response = new ApiResponse<>(
-                    false,
-                    "Error interno del servidor",
-                    null
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            logger.error("Error al actualizar categoría {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error interno del servidor", null));
         }
     }
 
-    // DELETE /api/categorias/{id} - Eliminar categoría
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteCategoria(@PathVariable Long id) {
         try {
             categoriaService.deleteById(id);
-            ApiResponse<Void> response = new ApiResponse<>(
-                    true,
-                    "Categoría eliminada exitosamente",
-                    null
-            );
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Categoría eliminada exitosamente", null));
         } catch (RuntimeException e) {
-            ApiResponse<Void> response = new ApiResponse<>(
-                    false,
-                    e.getMessage(),
-                    null
-            );
-            return ResponseEntity.badRequest().body(response);
+            logger.warn("Error al eliminar categoría {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(false, e.getMessage(), null));
         } catch (Exception e) {
-            System.err.println("Error al eliminar categoría: " + e.getMessage());
-            ApiResponse<Void> response = new ApiResponse<>(
-                    false,
-                    "Error interno del servidor",
-                    null
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            logger.error("Error al eliminar categoría {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error interno del servidor", null));
         }
     }
 
-    // GET /api/categorias/search - Buscar categorías
     @GetMapping("/search")
-    public ResponseEntity<List<Categoria>> searchCategorias(@RequestParam String denominacion) {
+    public ResponseEntity<ApiResponse<List<Categoria>>> searchCategorias(@RequestParam String denominacion) {
         try {
             List<Categoria> categorias = categoriaService.findByDenominacion(denominacion);
-            return ResponseEntity.ok(categorias);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Búsqueda completada exitosamente", categorias));
         } catch (Exception e) {
-            System.err.println("Error en búsqueda de categorías: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            logger.error("Error en búsqueda de categorías: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, "Error interno del servidor", null));
         }
     }
 }

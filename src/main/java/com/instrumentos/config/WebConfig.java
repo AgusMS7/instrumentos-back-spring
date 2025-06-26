@@ -12,23 +12,37 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         // CORS para APIs
         registry.addMapping("/api/**")
-                .allowedOriginPatterns("http://localhost:*", "https://localhost:*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedOriginPatterns(
+                    "http://localhost:*", 
+                    "http://127.0.0.1:*",
+                    "https://localhost:*", 
+                    "https://127.0.0.1:*"
+                )
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")
                 .allowedHeaders("*")
-                .allowCredentials(true);
+                .allowCredentials(true)
+                .maxAge(3600);
                 
         // CORS para imágenes
         registry.addMapping("/images/**")
-                .allowedOriginPatterns("http://localhost:*", "https://localhost:*")
-                .allowedMethods("GET", "OPTIONS")
+                .allowedOriginPatterns(
+                    "http://localhost:*", 
+                    "http://127.0.0.1:*",
+                    "https://localhost:*", 
+                    "https://127.0.0.1:*"
+                )
+                .allowedMethods("GET", "OPTIONS", "HEAD")
                 .allowedHeaders("*")
-                .allowCredentials(true);
+                .allowCredentials(true)
+                .maxAge(86400); // Cache por 24 horas
     }
     
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // Servir imágenes desde el directorio public/images
         registry.addResourceHandler("/images/**")
-                .addResourceLocations("file:public/images/", "classpath:/static/images/");
+                .addResourceLocations("file:public/images/", "classpath:/static/images/")
+                .setCachePeriod(3600) // Cache por 1 hora
+                .resourceChain(true);
     }
 }

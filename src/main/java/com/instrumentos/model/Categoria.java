@@ -10,12 +10,15 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 @Entity
-@Table(name = "categoria_instrumento")
+@Table(name = "categoria_instrumento", 
+       indexes = @Index(name = "idx_categoria_denominacion", columnList = "denominacion"))
 public class Categoria {
     
     @Id
@@ -23,14 +26,14 @@ public class Categoria {
     private Long id;
     
     @NotBlank(message = "La denominación es requerida")
-    @Column(nullable = false, length = 100)
+    @Size(min = 2, max = 100, message = "La denominación debe tener entre 2 y 100 caracteres")
+    @Column(nullable = false, length = 100, unique = true)
     private String denominacion;
     
     @OneToMany(mappedBy = "categoria", fetch = FetchType.LAZY)
-    @JsonIgnore // Evita la referencia circular
+    @JsonIgnore
     private List<Instrumento> instrumentos;
     
-    // Constructores
     public Categoria() {}
     
     public Categoria(String denominacion) {
@@ -51,7 +54,7 @@ public class Categoria {
     }
     
     public void setDenominacion(String denominacion) {
-        this.denominacion = denominacion;
+        this.denominacion = denominacion != null ? denominacion.trim() : null;
     }
     
     public List<Instrumento> getInstrumentos() {
@@ -68,5 +71,18 @@ public class Categoria {
                 "id=" + id +
                 ", denominacion='" + denominacion + '\'' +
                 '}';
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Categoria)) return false;
+        Categoria categoria = (Categoria) o;
+        return id != null && id.equals(categoria.id);
+    }
+    
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }
