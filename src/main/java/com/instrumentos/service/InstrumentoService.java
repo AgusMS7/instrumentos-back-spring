@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -80,9 +79,6 @@ public class InstrumentoService {
             logger.info("Instrumento guardado exitosamente con ID: {}", savedInstrumento.getId());
             
             return convertToDTO(savedInstrumento);
-        } catch (DataIntegrityViolationException e) {
-            logger.error("Error de integridad al guardar instrumento: {}", e.getMessage());
-            throw new RuntimeException("Error de integridad de datos al guardar el instrumento");
         } catch (Exception e) {
             logger.error("Error al guardar instrumento: {}", e.getMessage(), e);
             throw new RuntimeException("Error al guardar instrumento: " + e.getMessage(), e);
@@ -125,7 +121,7 @@ public class InstrumentoService {
     public List<InstrumentoDTO> findByCategoriaId(Long categoriaId) {
         try {
             logger.debug("Filtrando instrumentos por categoría ID: {}", categoriaId);
-            List<Instrumento> instrumentos = instrumentoRepository.findByCategoriaId(categoriaId);
+            List<Instrumento> instrumentos = instrumentoRepository.findByIdCategoria(categoriaId);
             return instrumentos.stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());

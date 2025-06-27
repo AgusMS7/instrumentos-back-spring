@@ -1,29 +1,32 @@
 # 🎵 Sistema de Instrumentos Musicales - Backend API
 
-Una API REST completa desarrollada con **Spring Boot 3** para la gestión de instrumentos musicales, categorías e imágenes.
+Una API REST completa desarrollada con **Spring Boot 3** para la gestión integral de instrumentos musicales, categorías, imágenes y **sistema de pedidos**.
 
-## 📋 Características Principales
+## 📋 Características Implementadas
 
-- ✅ **CRUD completo** de instrumentos y categorías
-- ✅ **Sistema de imágenes** con upload y gestión
-- ✅ **Paginación y filtrado** avanzado
-- ✅ **Búsqueda** por nombre de instrumento
-- ✅ **Validaciones** robustas de datos
-- ✅ **Manejo de errores** estructurado
-- ✅ **Logging** detallado para debugging
+- ✅ **CRUD completo** de instrumentos, categorías y **pedidos**
+- ✅ **Sistema de imágenes** con upload y gestión avanzada
+- ✅ **Sistema de pedidos** con múltiples instrumentos por pedido
+- ✅ **Paginación y ordenamiento** para instrumentos
+- ✅ **Búsqueda** por nombre de instrumento y categoría
+- ✅ **Búsqueda de pedidos** por fecha
+- ✅ **Validaciones** robustas de datos y relaciones
+- ✅ **Manejo de errores** estructurado con códigos HTTP apropiados
+- ✅ **Logging** detallado para debugging y monitoreo
 - ✅ **CORS** configurado para desarrollo frontend
 - ✅ **Base de datos PostgreSQL** con relaciones optimizadas
 
 ## 🛠️ Tecnologías Utilizadas
 
 - **Java 17+**
-- **Spring Boot 3.2.0**
+- **Spring Boot 3.5.3**
 - **Spring Data JPA**
-- **PostgreSQL 12+**
+- **PostgreSQL 17+**
 - **Maven 3.6+**
-- **Hibernate**
+- **Hibernate 6.6+**
 - **Jackson** para serialización JSON
 - **SLF4J + Logback** para logging
+- **HikariCP** para pool de conexiones
 
 ## 🚀 Instalación y Configuración
 
@@ -46,15 +49,18 @@ psql --version # Debe ser 12 o superior
 # Crear base de datos
 psql -U postgres -f scripts/01-crear-bd.sql
 
-# Crear tablas
-psql -U postgres -d InstrumentosDB -f scripts/02-crear-tablas.sql
+# Crear tablas principales
+psql -U postgres -d instrumentosdb -f scripts/02-crear-tablas.sql
 
 # Insertar datos iniciales
-psql -U postgres -d InstrumentosDB -f scripts/03-insertar-datos-json.sql
-psql -U postgres -d InstrumentosDB -f scripts/04-datos-adicionales.sql
+psql -U postgres -d instrumentosdb -f scripts/03-insertar-datos-json.sql
+psql -U postgres -d instrumentosdb -f scripts/04-datos-adicionales.sql
+
+# Crear tablas de pedidos
+psql -U postgres -d instrumentosdb -f scripts/09-datos-prueba-pedidos-final.sql
 
 # Verificar instalación
-psql -U postgres -d InstrumentosDB -c "SELECT COUNT(*) FROM instrumentos;"
+psql -U postgres -d instrumentosdb -f scripts/10-verificar-todo.sql
 \`\`\`
 
 ### 2. Configurar Aplicación
@@ -64,12 +70,13 @@ psql -U postgres -d InstrumentosDB -c "SELECT COUNT(*) FROM instrumentos;"
 git clone <url-del-repositorio>
 cd instrumentos-back-spring
 
-# Configurar application.properties (si es necesario)
+# Configurar application.properties
 # Las credenciales por defecto son:
 # - Usuario: postgres
-# - Contraseña: admin123
+# - Contraseña: postgres (cambiar según tu configuración)
 # - Puerto: 5432
-# - Base de datos: InstrumentosDB
+# - Base de datos: instrumentosdb
+# - Puerto del servidor: 3001
 \`\`\`
 
 ### 3. Compilar y Ejecutar
@@ -92,8 +99,8 @@ java -jar target/instrumentos-back-spring-1.0.0.jar
 # Probar endpoint básico
 curl http://localhost:3001/api/instrumentos
 
-# Verificar salud de la aplicación
-curl http://localhost:3001/actuator/health
+# Ejecutar tests completos
+bash test-api-completo.sh
 \`\`\`
 
 ## 📡 Endpoints de la API
@@ -105,38 +112,47 @@ http://localhost:3001/api
 
 ### 🎸 Instrumentos
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/instrumentos` | Obtener todos los instrumentos |
-| GET | `/instrumentos?paginated=true&page=0&size=10` | Obtener con paginación |
-| GET | `/instrumentos/{id}` | Obtener instrumento por ID |
-| POST | `/instrumentos` | Crear nuevo instrumento |
-| PUT | `/instrumentos/{id}` | Actualizar instrumento |
-| DELETE | `/instrumentos/{id}` | Eliminar instrumento |
-| GET | `/instrumentos/categoria/{categoriaId}` | Filtrar por categoría |
-| GET | `/instrumentos/buscar?nombre={nombre}` | Buscar por nombre |
+| Método | Endpoint | Descripción | Implementado |
+|--------|----------|-------------|--------------|
+| GET | `/instrumentos` | Obtener todos los instrumentos | ✅ |
+| GET | `/instrumentos?paginated=true&page=0&size=10&sortBy=precio&sortDir=desc` | Obtener con paginación y ordenamiento | ✅ |
+| GET | `/instrumentos/{id}` | Obtener instrumento por ID | ✅ |
+| POST | `/instrumentos` | Crear nuevo instrumento | ✅ |
+| PUT | `/instrumentos/{id}` | Actualizar instrumento | ✅ |
+| DELETE | `/instrumentos/{id}` | Eliminar instrumento | ✅ |
+| GET | `/instrumentos/categoria/{categoriaId}` | Filtrar por categoría | ✅ |
+| GET | `/instrumentos/buscar?nombre={nombre}` | Buscar por nombre | ✅ |
 
 ### 🗂️ Categorías
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/categorias` | Obtener todas las categorías |
-| GET | `/categorias/{id}` | Obtener categoría por ID |
-| POST | `/categorias` | Crear nueva categoría |
-| PUT | `/categorias/{id}` | Actualizar categoría |
-| DELETE | `/categorias/{id}` | Eliminar categoría |
-| GET | `/categorias/search?denominacion={nombre}` | Buscar categorías |
+| Método | Endpoint | Descripción | Implementado |
+|--------|----------|-------------|--------------|
+| GET | `/categorias` | Obtener todas las categorías | ✅ |
+| GET | `/categorias/{id}` | Obtener categoría por ID | ✅ |
+| POST | `/categorias` | Crear nueva categoría | ✅ |
+| PUT | `/categorias/{id}` | Actualizar categoría | ✅ |
+| DELETE | `/categorias/{id}` | Eliminar categoría | ✅ |
+
+### 🛒 Pedidos
+
+| Método | Endpoint | Descripción | Implementado |
+|--------|----------|-------------|--------------|
+| GET | `/pedidos` | Obtener todos los pedidos | ✅ |
+| GET | `/pedidos/{id}` | Obtener pedido por ID | ✅ |
+| POST | `/pedidos` | Crear nuevo pedido | ✅ |
+| DELETE | `/pedidos/{id}` | Eliminar pedido | ✅ |
+| GET | `/pedidos/fecha?fecha={yyyy-MM-dd}` | Buscar pedidos por fecha | ✅ |
 
 ### 🖼️ Imágenes
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/images/upload/{instrumentoId}` | Subir imagen |
-| GET | `/images/{filename}` | Obtener archivo de imagen |
-| GET | `/images/instrumento/{instrumentoId}` | Obtener imágenes de instrumento |
-| GET | `/images/instrumento/{instrumentoId}/primary` | Obtener imagen principal |
-| PUT | `/images/{imageId}/primary` | Establecer como principal |
-| DELETE | `/images/{imageId}` | Eliminar imagen |
+| Método | Endpoint | Descripción | Implementado |
+|--------|----------|-------------|--------------|
+| POST | `/images/upload/{instrumentoId}` | Subir imagen | ✅ |
+| GET | `/images/{filename}` | Obtener archivo de imagen | ✅ |
+| GET | `/images/instrumento/{instrumentoId}` | Obtener imágenes de instrumento | ✅ |
+| GET | `/images/instrumento/{instrumentoId}/primary` | Obtener imagen principal | ✅ |
+| PUT | `/images/{imageId}/primary` | Establecer como principal | ✅ |
+| DELETE | `/images/{imageId}` | Eliminar imagen | ✅ |
 
 ## 📝 Ejemplos de Uso
 
@@ -153,7 +169,26 @@ curl -X POST "http://localhost:3001/api/instrumentos" \
     "costoEnvio": "G",
     "cantidadVendida": 0,
     "descripcion": "Guitarra acústica ideal para principiantes",
-    "categoria": { "id": 1 }
+    "idCategoria": 1
+  }'
+\`\`\`
+
+### Crear Pedido
+
+\`\`\`bash
+curl -X POST "http://localhost:3001/api/pedidos" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instrumentos": [
+      {
+        "instrumentoId": 1,
+        "cantidad": 2
+      },
+      {
+        "instrumentoId": 3,
+        "cantidad": 1
+      }
+    ]
   }'
 \`\`\`
 
@@ -166,7 +201,7 @@ curl -X POST "http://localhost:3001/api/images/upload/1" \
   -F "isPrimary=true"
 \`\`\`
 
-### Buscar Instrumentos
+### Búsquedas y Filtros
 
 \`\`\`bash
 # Buscar por nombre
@@ -175,63 +210,158 @@ curl "http://localhost:3001/api/instrumentos/buscar?nombre=guitarra"
 # Filtrar por categoría
 curl "http://localhost:3001/api/instrumentos/categoria/1"
 
-# Obtener con paginación
+# Obtener con paginación y ordenamiento
 curl "http://localhost:3001/api/instrumentos?paginated=true&page=0&size=5&sortBy=precio&sortDir=desc"
+
+# Buscar pedidos por fecha
+curl "http://localhost:3001/api/pedidos/fecha?fecha=2024-01-15"
+\`\`\`
+
+### Parámetros de Paginación
+
+\`\`\`bash
+# Parámetros disponibles para /instrumentos:
+# - paginated: true/false (default: false)
+# - page: número de página (default: 0)
+# - size: elementos por página (default: 10)
+# - sortBy: campo para ordenar (default: "id")
+# - sortDir: dirección del orden "asc"/"desc" (default: "asc")
+
+# Ejemplo completo:
+curl "http://localhost:3001/api/instrumentos?paginated=true&page=1&size=5&sortBy=precio&sortDir=desc"
 \`\`\`
 
 ## 🗄️ Estructura de Base de Datos
 
-### Tabla: categorias
+### Tabla: categoria_instrumento
 \`\`\`sql
-CREATE TABLE categorias (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE categoria_instrumento (
+    id BIGSERIAL PRIMARY KEY,
     denominacion VARCHAR(100) NOT NULL UNIQUE
 );
 \`\`\`
 
-### Tabla: instrumentos
+### Tabla: instrumento
 \`\`\`sql
-CREATE TABLE instrumentos (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE instrumento (
+    id BIGSERIAL PRIMARY KEY,
     instrumento VARCHAR(255) NOT NULL,
     marca VARCHAR(100) NOT NULL,
     modelo VARCHAR(100) NOT NULL,
-    imagen VARCHAR(255),
+    imagen VARCHAR(255) DEFAULT '',
     precio DECIMAL(10,2) NOT NULL,
-    costo_envio CHAR(1) DEFAULT 'G',
+    costo_envio VARCHAR(10) DEFAULT '0',
+    cantidadvendida INTEGER DEFAULT 0,
+    descripcion TEXT DEFAULT '',
+    id_categoria BIGINT,
     cantidad_vendida INTEGER DEFAULT 0,
-    descripcion TEXT,
-    id_categoria INTEGER NOT NULL,
-    FOREIGN KEY (id_categoria) REFERENCES categorias(id)
+    FOREIGN KEY (id_categoria) REFERENCES categoria_instrumento(id)
+);
+\`\`\`
+
+### Tabla: pedido
+\`\`\`sql
+CREATE TABLE pedido (
+    id BIGSERIAL PRIMARY KEY,
+    fecha_pedido DATE NOT NULL,
+    total_pedido DECIMAL(10,2) NOT NULL
+);
+\`\`\`
+
+### Tabla: pedido_detalle
+\`\`\`sql
+CREATE TABLE pedido_detalle (
+    id BIGSERIAL PRIMARY KEY,
+    pedido_id BIGINT NOT NULL,
+    instrumento_id BIGINT NOT NULL,
+    cantidad INTEGER NOT NULL,
+    FOREIGN KEY (pedido_id) REFERENCES pedido(id) ON DELETE CASCADE,
+    FOREIGN KEY (instrumento_id) REFERENCES instrumento(id) ON DELETE CASCADE
 );
 \`\`\`
 
 ### Tabla: product_images
 \`\`\`sql
 CREATE TABLE product_images (
-    id SERIAL PRIMARY KEY,
-    instrumento_id INTEGER NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    instrumento_id BIGINT NOT NULL,
     image_url VARCHAR(500) NOT NULL,
     alt_text VARCHAR(255),
     is_primary BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (instrumento_id) REFERENCES instrumentos(id) ON DELETE CASCADE
+    FOREIGN KEY (instrumento_id) REFERENCES instrumento(id) ON DELETE CASCADE
 );
 \`\`\`
 
 ## 📊 Formato de Respuestas
 
-### Respuesta Exitosa
+### Respuesta Exitosa (Lista Simple)
 \`\`\`json
 {
   "success": true,
-  "message": "Operación exitosa",
+  "message": "Instrumentos obtenidos exitosamente",
+  "data": [
+    {
+      "id": 1,
+      "instrumento": "Guitarra Acústica",
+      "marca": "Yamaha",
+      "modelo": "FG800",
+      "precio": 15000.00,
+      "costoEnvio": "G",
+      "cantidadVendida": 5,
+      "descripcion": "Guitarra acústica ideal para principiantes",
+      "categoriaDenominacion": "Cuerda",
+      "imagenes": []
+    }
+  ]
+}
+\`\`\`
+
+### Respuesta Paginada
+\`\`\`json
+{
+  "content": [
+    {
+      "id": 1,
+      "instrumento": "Guitarra Acústica",
+      "marca": "Yamaha",
+      "precio": 15000.00,
+      "categoriaDenominacion": "Cuerda"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 10,
+    "sort": {
+      "sorted": true,
+      "ascending": false
+    }
+  },
+  "totalElements": 25,
+  "totalPages": 3,
+  "first": true,
+  "last": false,
+  "numberOfElements": 10
+}
+\`\`\`
+
+### Respuesta de Pedido
+\`\`\`json
+{
+  "success": true,
+  "message": "Pedido creado exitosamente",
   "data": {
     "id": 1,
-    "instrumento": "Guitarra Acústica",
-    "marca": "Yamaha",
-    "precio": 15000.00,
-    "categoriaDenominacion": "Cuerda"
+    "fechaPedido": "2024-01-15",
+    "totalPedido": 45000.00,
+    "detalles": [
+      {
+        "id": 1,
+        "instrumentoId": 1,
+        "cantidad": 2,
+        "instrumento": "Guitarra Acústica Yamaha"
+      }
+    ]
   }
 }
 \`\`\`
@@ -245,52 +375,31 @@ CREATE TABLE product_images (
 }
 \`\`\`
 
-## 🔧 Configuración
-
-### Variables de Entorno (Opcionales)
-\`\`\`bash
-export DB_HOST=localhost
-export DB_PORT=5432
-export DB_NAME=InstrumentosDB
-export DB_USER=postgres
-export DB_PASSWORD=admin123
-export SERVER_PORT=3001
-\`\`\`
-
-### Perfiles de Spring
-\`\`\`bash
-# Desarrollo
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
-
-# Producción
-java -jar app.jar --spring.profiles.active=prod
-\`\`\`
-
-## 🧪 Testing
+## 🧪 Testing Completo
 
 ### Ejecutar Tests Automatizados
 \`\`\`bash
-# Ejecutar script de testing
-bash test-api.sh
+# Ejecutar script de testing completo
+bash test-api-completo.sh
 
 # Tests incluidos:
 # ✅ CRUD de categorías (5 tests)
-# ✅ CRUD de instrumentos (6 tests)
-# ✅ Sistema de imágenes (3 tests)
-# ✅ Validaciones (3 tests)
-# ✅ Total: 17 tests
+# ✅ CRUD de instrumentos (8 tests)
+# ✅ CRUD de pedidos (5 tests)
+# ✅ Sistema de imágenes (4 tests)
+# ✅ Validaciones y errores (4 tests)
+# ✅ Limpieza de datos (5 tests)
+# ✅ Total: 31 tests completos
 \`\`\`
 
-### Tests Manuales con curl
-\`\`\`bash
-# Test básico de conectividad
-curl -I http://localhost:3001/api/instrumentos
-
-# Test de creación de categoría
-curl -X POST "http://localhost:3001/api/categorias" \
-  -H "Content-Type: application/json" \
-  -d '{"denominacion": "Test Category"}'
-\`\`\`
+### Cobertura de Testing
+- **Funcionalidad básica**: CRUD completo de todas las entidades
+- **Relaciones**: Validación de foreign keys y cascadas
+- **Paginación**: Tests de paginación y ordenamiento
+- **Búsqueda**: Tests de filtrado y búsqueda
+- **Validaciones**: Tests de datos inválidos y duplicados
+- **Manejo de errores**: Tests de códigos HTTP apropiados
+- **Limpieza**: Eliminación automática de datos de prueba
 
 ## 📁 Estructura del Proyecto
 
@@ -299,140 +408,106 @@ src/
 ├── main/
 │   ├── java/com/instrumentos/
 │   │   ├── config/          # Configuraciones (CORS, Web)
+│   │   │   └── WebConfig.java
 │   │   ├── controller/      # Controladores REST
+│   │   │   ├── CategoriaController.java
+│   │   │   ├── InstrumentoController.java
+│   │   │   ├── PedidoController.java
+│   │   │   ├── ImageController.java
+│   │   │   └── HomeController.java
 │   │   ├── dto/            # Data Transfer Objects
+│   │   │   ├── InstrumentoDTO.java
+│   │   │   ├── PedidoDTO.java
+│   │   │   ├── PedidoDetalleDTO.java
+│   │   │   ├── CrearPedidoRequest.java
+│   │   │   ├── ItemCarritoDTO.java
+│   │   │   ├── ProductImageDTO.java
+│   │   │   └── ApiResponse.java
 │   │   ├── exception/      # Manejo de excepciones
+│   │   │   └── GlobalExceptionHandler.java
 │   │   ├── model/          # Entidades JPA
+│   │   │   ├── Instrumento.java
+│   │   │   ├── Categoria.java
+│   │   │   ├── Pedido.java
+│   │   │   ├── PedidoDetalle.java
+│   │   │   └── ProductImage.java
 │   │   ├── repository/     # Repositorios JPA
-│   │   └── service/        # Lógica de negocio
+│   │   │   ├── InstrumentoRepository.java
+│   │   │   ├── CategoriaRepository.java
+│   │   │   ├── PedidoRepository.java
+│   │   │   ├── PedidoDetalleRepository.java
+│   │   │   └── ProductImageRepository.java
+│   │   ├── service/        # Lógica de negocio
+│   │   │   ├── InstrumentoService.java
+│   │   │   ├── CategoriaService.java
+│   │   │   ├── PedidoService.java
+│   │   │   └── ProductImageService.java
+│   │   └── InstrumentosSandovalApplication.java
 │   └── resources/
 │       ├── application.properties
-│       └── static/         # Archivos estáticos
+│       └── static/images/  # Directorio de imágenes
 ├── test/                   # Tests unitarios
 ├── scripts/               # Scripts SQL
-├── public/images/         # Directorio de imágenes
+│   ├── 01-crear-bd.sql
+│   ├── 02-crear-tablas.sql
+│   ├── 03-insertar-datos-json.sql
+│   ├── 04-datos-adicionales.sql
+│   ├── 05-verificar-datos.sql
+│   ├── 09-datos-prueba-pedidos-final.sql
+│   └── 10-verificar-todo.sql
+├── public/images/         # Directorio público de imágenes
+├── test-api-completo.sh   # Script de testing completo
 └── target/               # Archivos compilados
 \`\`\`
 
-## 🔍 Logging y Monitoreo
+## 🔧 Configuración
 
-### Logs de la Aplicación
-\`\`\`bash
-# Ver logs en tiempo real
-tail -f logs/spring.log
+### application.properties
+\`\`\`properties
+# Base de datos PostgreSQL
+spring.datasource.url=jdbc:postgresql://localhost:5432/instrumentosdb
+spring.datasource.username=postgres
+spring.datasource.password=postgres
+spring.datasource.driver-class-name=org.postgresql.Driver
 
-# Filtrar errores
-grep ERROR logs/spring.log
+# JPA/Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 
-# Filtrar por endpoint
-grep "/api/instrumentos" logs/spring.log
+# Servidor - Puerto 3001
+server.port=3001
+
+# Logging
+logging.level.com.instrumentos=DEBUG
+logging.level.org.springframework.web=DEBUG
+
+# Archivos
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
 \`\`\`
 
-### Endpoints de Monitoreo
-\`\`\`bash
-# Salud de la aplicación
-curl http://localhost:3001/actuator/health
+## 🚨 Notas Importantes
 
-# Información de la aplicación
-curl http://localhost:3001/actuator/info
+1. **Puerto del servidor**: La aplicación corre en el puerto **3001** para evitar conflictos
+2. **Base de datos**: Requiere PostgreSQL con la base de datos `instrumentosdb`
+3. **Imágenes**: Se almacenan en `public/images/` y `src/main/resources/static/images/`
+4. **CORS**: Configurado para permitir localhost en cualquier puerto
+5. **Paginación**: Solo disponible para instrumentos con el parámetro `paginated=true`
+6. **Validaciones**: Todos los endpoints validan datos de entrada
+7. **Transacciones**: Los pedidos se crean de forma transaccional
+8. **Cascadas**: Eliminar un pedido elimina automáticamente sus detalles
 
-# Métricas
-curl http://localhost:3001/actuator/metrics
-\`\`\`
+## 🎯 Próximos Pasos Sugeridos
 
-## 🚨 Solución de Problemas
-
-### Error de Conexión a Base de Datos
-1. Verificar que PostgreSQL esté ejecutándose
-2. Confirmar credenciales en `application.properties`
-3. Verificar que la base de datos `InstrumentosDB` exista
-
-### Error CORS
-1. Verificar configuración en `WebConfig.java`
-2. Confirmar que el frontend esté en puerto permitido (3000, 5173)
-
-### Error de Subida de Archivos
-1. Verificar permisos de escritura en `public/images/`
-2. Confirmar tamaño máximo de archivo (5MB)
-3. Verificar formatos permitidos (JPG, PNG, GIF, WEBP)
-
-### Puerto en Uso
-\`\`\`bash
-# Verificar qué proceso usa el puerto 3001
-netstat -tulpn | grep 3001
-
-# Cambiar puerto en application.properties
-server.port=3002
-\`\`\`
-
-## 🔄 Integración con Frontend
-
-### Configuración de Axios (JavaScript)
-\`\`\`javascript
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: 'http://localhost:3001/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Ejemplo de uso
-const getInstrumentos = async () => {
-  const response = await api.get('/instrumentos');
-  return response.data;
-};
-\`\`\`
-
-### URLs de Imágenes
-\`\`\`javascript
-// URL base para imágenes
-const IMAGE_BASE_URL = 'http://localhost:3001/api/images/';
-
-// Mostrar imagen
-const imageUrl = IMAGE_BASE_URL + filename;
-\`\`\`
-
-## 📈 Rendimiento y Optimización
-
-- **Pool de conexiones**: Configurado con HikariCP
-- **Índices de base de datos**: En campos frecuentemente consultados
-- **Cache de recursos estáticos**: 1 hora para imágenes
-- **Compresión HTTP**: Habilitada para JSON y texto
-- **Batch processing**: Para operaciones masivas en BD
-
-## 🔐 Seguridad
-
-- **Validación de entrada**: En todos los endpoints
-- **Sanitización de archivos**: Validación de tipos y tamaños
-- **Manejo seguro de errores**: Sin exposición de stack traces
-- **CORS configurado**: Solo orígenes permitidos
-
-## 📚 Documentación Adicional
-
-- [Spring Boot Documentation](https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/)
-- [Spring Data JPA](https://docs.spring.io/spring-data/jpa/docs/current/reference/html/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-
-## 👨‍💻 Desarrollo
-
-### Agregar Nueva Funcionalidad
-1. Crear entidad en `model/`
-2. Crear repositorio en `repository/`
-3. Implementar servicio en `service/`
-4. Crear controlador en `controller/`
-5. Agregar tests correspondientes
-
-### Convenciones de Código
-- **Nombres de clases**: PascalCase
-- **Nombres de métodos**: camelCase
-- **Nombres de endpoints**: kebab-case
-- **Logging**: Usar SLF4J con niveles apropiados
-
-## 📄 Licencia
-
-Este proyecto está desarrollado por Agustín Sandoval
+1. **Frontend**: Implementar interfaz de usuario con React/Angular/Vue
+2. **Autenticación**: Agregar JWT para seguridad
+3. **Cache**: Implementar Redis para mejorar rendimiento
+4. **Documentación**: Agregar Swagger/OpenAPI
+5. **Tests**: Ampliar cobertura de tests unitarios
+6. **Docker**: Containerizar la aplicación
+7. **CI/CD**: Configurar pipeline de despliegue
 
 ---
 
@@ -442,13 +517,3 @@ Este proyecto está desarrollado por Agustín Sandoval
 **Materia:** Laboratorio de Computación 4  
 **Año:** 2025
 ---
-
-## 🆘 Soporte
-
-Para reportar problemas o solicitar ayuda:
-
-1. **Issues del repositorio**: Para bugs y mejoras
-2. **Documentación**: Revisar este README y la documentación de Spring Boot
-3. **Logs**: Revisar logs de la aplicación para detalles de errores
-
-**¡Gracias por usar el Sistema de Instrumentos Musicales! 🎵**

@@ -1,48 +1,38 @@
 package com.instrumentos.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
-    
+
     @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        // CORS para APIs
+    public void addCorsMappings(@NonNull CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOriginPatterns(
-                    "http://localhost:*", 
-                    "http://127.0.0.1:*",
-                    "https://localhost:*", 
-                    "https://127.0.0.1:*"
+                .allowedOrigins(
+                    "http://localhost:3000",
+                    "http://localhost:5173",
+                    "http://127.0.0.1:3000",
+                    "http://127.0.0.1:5173"
                 )
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);
-                
-        // CORS para imágenes
-        registry.addMapping("/images/**")
-                .allowedOriginPatterns(
-                    "http://localhost:*", 
-                    "http://127.0.0.1:*",
-                    "https://localhost:*", 
-                    "https://127.0.0.1:*"
-                )
-                .allowedMethods("GET", "OPTIONS", "HEAD")
-                .allowedHeaders("*")
-                .allowCredentials(true)
-                .maxAge(86400); // Cache por 24 horas
     }
-    
+
     @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Servir imágenes desde el directorio public/images
+    public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
+        // Configurar el manejo de archivos estáticos
         registry.addResourceHandler("/images/**")
-                .addResourceLocations("file:public/images/", "classpath:/static/images/")
-                .setCachePeriod(3600) // Cache por 1 hora
-                .resourceChain(true);
+                .addResourceLocations("classpath:/static/images/")
+                .setCachePeriod(3600);
+        
+        registry.addResourceHandler("/static/**")
+                .addResourceLocations("classpath:/static/")
+                .setCachePeriod(3600);
     }
 }

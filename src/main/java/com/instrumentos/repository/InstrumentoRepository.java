@@ -12,36 +12,48 @@ import com.instrumentos.model.Instrumento;
 
 @Repository
 public interface InstrumentoRepository extends JpaRepository<Instrumento, Long> {
-    
+
     // Buscar por categoría
-    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria WHERE i.categoria.id = :categoriaId")
-    List<Instrumento> findByCategoriaId(@Param("categoriaId") Long categoriaId);
-    
-    // Buscar por nombre (contiene, ignorando mayúsculas)
-    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria WHERE LOWER(i.instrumento) LIKE LOWER(CONCAT('%', :instrumento, '%'))")
-    List<Instrumento> findByInstrumentoContainingIgnoreCase(@Param("instrumento") String instrumento);
-    
+    List<Instrumento> findByIdCategoria(Long categoriaId);
+
+    // Buscar por nombre (case insensitive)
+    List<Instrumento> findByInstrumentoContainingIgnoreCase(String nombre);
+
     // Buscar por marca
-    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria WHERE LOWER(i.marca) LIKE LOWER(CONCAT('%', :marca, '%'))")
-    List<Instrumento> findByMarcaContainingIgnoreCase(@Param("marca") String marca);
-    
-    // Buscar instrumentos con precio menor o igual
-    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria WHERE i.precio <= :precio")
-    List<Instrumento> findByPrecioLessThanEqual(@Param("precio") BigDecimal precio);
-    
-    // Query personalizada para buscar por múltiples campos
-    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria WHERE " +
-           "LOWER(i.instrumento) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(i.marca) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(i.modelo) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
-    List<Instrumento> findByMultipleFields(@Param("searchTerm") String searchTerm);
-    
-    // Obtener instrumentos más vendidos
-    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria ORDER BY i.cantidadVendida DESC")
-    List<Instrumento> findTopSellingInstruments();
-    
-    // Override del findAll para incluir categoría
-    @Query("SELECT i FROM Instrumento i JOIN FETCH i.categoria")
-    @Override
-    List<Instrumento> findAll();
+    List<Instrumento> findByMarcaContainingIgnoreCase(String marca);
+
+    // Buscar por rango de precios
+    List<Instrumento> findByPrecioBetween(BigDecimal precioMin, BigDecimal precioMax);
+
+    // Buscar por precio menor o igual
+    List<Instrumento> findByPrecioLessThanEqual(BigDecimal precio);
+
+    // Buscar por precio mayor o igual
+    List<Instrumento> findByPrecioGreaterThanEqual(BigDecimal precio);
+
+    // Buscar instrumentos con envío gratis
+    @Query("SELECT i FROM Instrumento i WHERE i.costoEnvio = 'G'")
+    List<Instrumento> findInstrumentosConEnvioGratis();
+
+    // Buscar instrumentos más vendidos
+    @Query("SELECT i FROM Instrumento i ORDER BY i.cantidadVendida DESC")
+    List<Instrumento> findInstrumentosMasVendidos();
+
+    // Buscar instrumentos por categoría con información de categoría
+    @Query("SELECT i FROM Instrumento i LEFT JOIN FETCH i.categoria WHERE i.idCategoria = :categoriaId")
+    List<Instrumento> findByIdCategoriaWithCategoria(@Param("categoriaId") Long categoriaId);
+
+    // Buscar instrumentos con imágenes
+    @Query("SELECT DISTINCT i FROM Instrumento i LEFT JOIN FETCH i.imagenes")
+    List<Instrumento> findAllWithImages();
+
+    // Buscar por ID con imágenes
+    @Query("SELECT i FROM Instrumento i LEFT JOIN FETCH i.imagenes WHERE i.id = :id")
+    Instrumento findByIdWithImages(@Param("id") Long id);
+
+    // Contar instrumentos por categoría
+    long countByIdCategoria(Long categoriaId);
+
+    // Verificar si existe por nombre exacto
+    boolean existsByInstrumentoIgnoreCase(String nombre);
 }
